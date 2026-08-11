@@ -1,0 +1,25 @@
+name: calenolav
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-calenolav}
+      POSTGRES_USER: ${POSTGRES_USER:-calenolav}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-calenolav_local_only}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - calenolav_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+volumes:
+  calenolav_pgdata:
+

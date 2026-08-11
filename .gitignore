@@ -31,3 +31,6 @@ prompt.txt
 
 # Legacy prototype (not part of calenolav)
 calendar_dna/
+
+# Private teaching command runner
+code.bash

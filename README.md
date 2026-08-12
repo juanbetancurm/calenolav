@@ -18,9 +18,9 @@ This modular-monolith design keeps one deployable backend while separating domai
 
 | Step | Outcome | Status |
 | --- | --- | --- |
-| 1 | Repository conventions and a healthy PostgreSQL container | In progress |
-| 2 | Tests-first initial relational schema and migrations | Next |
-| 3 | Typed backend skeleton with health/readiness endpoints | Planned |
+| 1 | Repository conventions and a healthy PostgreSQL container | Complete |
+| 2 | Tests-first initial relational schema and migrations | Complete |
+| 3 | Typed backend skeleton with health/readiness endpoints | Next |
 | 4 | Owner registration, secure sessions, and tenant isolation | Planned |
 | 5 | Google OAuth connection and encrypted token storage | Planned |
 | 6 | Availability rules and privacy-safe public availability API | Planned |
@@ -34,3 +34,9 @@ This modular-monolith design keeps one deployable backend while separating domai
 PostgreSQL runs in a container so every contributor uses the same database major version and setup. The named Docker volume preserves local data when the container stops. The health check lets later services wait for the database to become ready instead of guessing with a sleep.
 
 `.env.example` contains safe local defaults only. Real credentials and OAuth secrets must stay in the ignored `.env` file or a production secret manager.
+
+## Step 2: identity and tenant foundation
+
+The first schema slice contains users, tenants, tenant memberships, and hashed sessions. Keeping membership separate makes every future owner operation tenant-aware and gives us a clear authorization boundary.
+
+Database integration tests specify the important constraints before the migration is accepted: email uniqueness ignores letter case, public slugs use a URL-safe format, memberships require real tenants and users, and an owner can be related to a tenant. Each test runs inside a transaction that is rolled back, so tests do not leave sample records behind.

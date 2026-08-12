@@ -1,0 +1,23 @@
+{
+  "name": "calenolav",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "db:generate": "npm run generate --workspace=@calenolav/database",
+    "db:migrate": "npm run migrate --workspace=@calenolav/database",
+    "db:test": "npm run test --workspace=@calenolav/database",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
+  },
+  "allowScripts": {
+    "esbuild": false
+  }
+}

@@ -22,7 +22,7 @@ This modular-monolith design keeps one deployable backend while separating domai
 | 2 | Tests-first initial relational schema and migrations | Complete |
 | 3 | Typed backend skeleton with health/readiness endpoints | Complete |
 | 4 | Owner registration, secure sessions, and tenant isolation | Complete |
-| 5 | Google OAuth connection and encrypted token storage | Planned |
+| 5 | Google OAuth connection and encrypted token storage | In progress |
 | 6 | Availability rules and privacy-safe public availability API | Planned |
 | 7 | Conflict-safe booking and Google event creation | Planned |
 | 8 | React owner and visitor experiences | Planned |
@@ -53,3 +53,6 @@ While password authentication is the only factor, passwords require 15–128 Uni
 The API now supports `POST /auth/register`, `POST /auth/sign-in`, `GET /auth/session`, and `POST /auth/sign-out`. Successful authentication stores the raw session token only in a hardened cookie; PostgreSQL stores its SHA-256 digest. Session lookup returns a tenant-aware principal, and authorization compares the requested tenant and required role against that principal.
 
 Sign-in deliberately returns one generic failure for an unknown email or incorrect password and performs scrypt verification in both cases. Sign-out revokes server-side state, clears the browser cookie, and is safe to repeat.
+## Step 5: Google Calendar connection
+
+The OAuth boundary starts with two relational records. A short-lived authorization attempt stores only a digest of the CSRF state and an encrypted PKCE verifier. A completed tenant connection stores Google account identity, the scopes actually granted, the selected calendar, and an encrypted refresh-token envelope. Short-lived Google access tokens are not persisted.

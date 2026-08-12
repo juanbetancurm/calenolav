@@ -11,6 +11,9 @@
     "node": ">=24.0.0"
   },
   "scripts": {
+    "api:build": "npm run build --workspace=@calenolav/api",
+    "api:dev": "npm run dev --workspace=@calenolav/api",
+    "api:test": "npm run test --workspace=@calenolav/api",
     "db:generate": "npm run generate --workspace=@calenolav/database",
     "db:migrate": "npm run migrate --workspace=@calenolav/database",
     "db:test": "npm run test --workspace=@calenolav/database",

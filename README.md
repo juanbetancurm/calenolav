@@ -21,7 +21,7 @@ This modular-monolith design keeps one deployable backend while separating domai
 | 1 | Repository conventions and a healthy PostgreSQL container | Complete |
 | 2 | Tests-first initial relational schema and migrations | Complete |
 | 3 | Typed backend skeleton with health/readiness endpoints | Complete |
-| 4 | Owner registration, secure sessions, and tenant isolation | Next |
+| 4 | Owner registration, secure sessions, and tenant isolation | In progress |
 | 5 | Google OAuth connection and encrypted token storage | Planned |
 | 6 | Availability rules and privacy-safe public availability API | Planned |
 | 7 | Conflict-safe booking and Google event creation | Planned |
@@ -45,3 +45,8 @@ Database integration tests specify the important constraints before the migratio
 The Node backend starts with separate liveness and readiness contracts. Liveness reports whether the HTTP process can answer and must not depend on PostgreSQL. Readiness reports whether the process can safely receive traffic and returns a privacy-safe `503` response when a dependency check fails.
 
 These contracts are written as Fastify injection tests before route implementation. Injection exercises the real HTTP routing and serialization stack without opening a network port, keeping the tests fast and deterministic.
+## Step 4: owner registration and sessions
+
+Registration is implemented as an application use case before adding its HTTP and PostgreSQL adapters. The use case validates and normalizes public identity data, delegates password hashing, creates one user + tenant + owner membership + session atomically, and returns the raw session token only to the caller. Only its hash is eligible for database storage.
+
+While password authentication is the only factor, passwords require 15–128 Unicode code points. All printable characters and spaces are allowed, and no character-composition rule is imposed. This follows current NIST single-factor guidance while still permitting long passphrases.

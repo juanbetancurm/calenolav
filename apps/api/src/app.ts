@@ -1,4 +1,6 @@
 import Fastify, { type FastifyInstance } from "fastify";
+import type { RegisterOwnerService } from "./auth/register-owner.js";
+import { registerRegistrationRoutes } from "./auth/registration-routes.js";
 import type { ReadinessCheck } from "./readiness.js";
 
 export type { ReadinessCheck } from "./readiness.js";
@@ -6,6 +8,10 @@ export type { ReadinessCheck } from "./readiness.js";
 export interface BuildAppOptions {
   logger?: boolean;
   readinessCheck: ReadinessCheck;
+  registration?: {
+    registerOwner: Pick<RegisterOwnerService, "execute">;
+    secureCookies: boolean;
+  };
 }
 
 const healthResponseSchema = {
@@ -28,6 +34,10 @@ const readyResponseSchema = {
 
 export function buildApp(options: BuildAppOptions): FastifyInstance {
   const app = Fastify({ logger: options.logger ?? false });
+
+  if (options.registration) {
+    void app.register(registerRegistrationRoutes, options.registration);
+  }
 
   app.get(
     "/health",

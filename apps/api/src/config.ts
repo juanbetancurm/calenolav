@@ -7,6 +7,7 @@ export interface ApiConfig {
   databaseUrl: string;
   host: string;
   port: number;
+  secureCookies: boolean;
 }
 
 export function loadEnvironmentFile(): void {
@@ -28,9 +29,15 @@ export function readConfig(environment: Environment = process.env): ApiConfig {
     throw new Error("API_PORT must be an integer between 1 and 65535.");
   }
 
+  const rawSecureCookies = environment.COOKIE_SECURE?.trim().toLowerCase() || "true";
+  if (rawSecureCookies !== "true" && rawSecureCookies !== "false") {
+    throw new Error("COOKIE_SECURE must be true or false.");
+  }
+
   return {
     databaseUrl,
     host: environment.API_HOST?.trim() || "0.0.0.0",
     port,
+    secureCookies: rawSecureCookies === "true",
   };
 }

@@ -7,6 +7,7 @@ describe("API configuration", () => {
       databaseUrl: "postgresql://example",
       host: "0.0.0.0",
       port: 3000,
+      secureCookies: true,
     });
   });
 
@@ -15,13 +16,20 @@ describe("API configuration", () => {
       readConfig({
         API_HOST: "127.0.0.1",
         API_PORT: "4000",
+        COOKIE_SECURE: "false",
         DATABASE_URL: "postgresql://example",
       }),
-    ).toMatchObject({ host: "127.0.0.1", port: 4000 });
+    ).toMatchObject({ host: "127.0.0.1", port: 4000, secureCookies: false });
   });
 
   it("rejects missing database configuration", () => {
     expect(() => readConfig({})).toThrow("DATABASE_URL is required");
+  });
+
+  it("rejects an invalid COOKIE_SECURE value", () => {
+    expect(() =>
+      readConfig({ COOKIE_SECURE: "sometimes", DATABASE_URL: "postgresql://example" }),
+    ).toThrow("COOKIE_SECURE must be true or false");
   });
 
   it.each(["0", "65536", "not-a-port"])("rejects invalid API_PORT %s", (port) => {

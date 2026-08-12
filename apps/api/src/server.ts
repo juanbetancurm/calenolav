@@ -1,5 +1,8 @@
 import { Pool } from "pg";
 import { buildApp } from "./app.js";
+import { PostgresOwnerRegistrationRepository } from "./auth/postgres-owner-registration.js";
+import { RegisterOwnerService } from "./auth/register-owner.js";
+import { RandomSessionTokenIssuer, ScryptPasswordHasher } from "./auth/security.js";
 import { loadEnvironmentFile, readConfig } from "./config.js";
 import { createPostgresReadinessCheck } from "./readiness.js";
 
@@ -13,9 +16,21 @@ const pool = new Pool({
   max: 10,
 });
 
+const registerOwner = new RegisterOwnerService({
+  clock: () => new Date(),
+  passwordHasher: new ScryptPasswordHasher(),
+  repository: new PostgresOwnerRegistrationRepository(pool),
+  sessionDurationMs: 30 * 24 * 60 * 60 * 1_000,
+  sessionTokenIssuer: new RandomSessionTokenIssuer(),
+});
+
 const app = buildApp({
   logger: true,
   readinessCheck: createPostgresReadinessCheck(async (statement) => pool.query(statement)),
+  registration: {
+    registerOwner,
+    secureCookies: config.secureCookies,
+  },
 });
 
 app.addHook("onClose", async () => {

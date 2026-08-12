@@ -1,6 +1,12 @@
 import Fastify, { type FastifyInstance } from "fastify";
 import type { RegisterOwnerService } from "./auth/register-owner.js";
 import { registerRegistrationRoutes } from "./auth/registration-routes.js";
+import { registerSessionRoutes } from "./auth/session-routes.js";
+import type {
+  AuthenticateSessionService,
+  SignInService,
+  SignOutService,
+} from "./auth/session-services.js";
 import type { ReadinessCheck } from "./readiness.js";
 
 export type { ReadinessCheck } from "./readiness.js";
@@ -11,6 +17,12 @@ export interface BuildAppOptions {
   registration?: {
     registerOwner: Pick<RegisterOwnerService, "execute">;
     secureCookies: boolean;
+  };
+  sessions?: {
+    authenticateSession: Pick<AuthenticateSessionService, "execute">;
+    secureCookies: boolean;
+    signIn: Pick<SignInService, "execute">;
+    signOut: Pick<SignOutService, "execute">;
   };
 }
 
@@ -37,6 +49,10 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
 
   if (options.registration) {
     void app.register(registerRegistrationRoutes, options.registration);
+  }
+
+  if (options.sessions) {
+    void app.register(registerSessionRoutes, options.sessions);
   }
 
   app.get(

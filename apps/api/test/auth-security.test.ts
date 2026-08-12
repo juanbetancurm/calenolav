@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import {
   RandomSessionTokenIssuer,
+  Sha256SessionTokenHasher,
   SCRYPT_PASSWORD_PARAMETERS,
   ScryptPasswordHasher,
 } from "../src/auth/security.js";
@@ -42,5 +43,12 @@ describe("authentication security adapters", () => {
     );
     expect(issued.tokenHash).toHaveLength(64);
     expect(issued.tokenHash).not.toContain(issued.rawToken);
+  });
+  it("recreates the same digest when a cookie token is presented", () => {
+    const hasher = new Sha256SessionTokenHasher();
+
+    expect(hasher.hash("presented-cookie-token")).toBe(
+      createHash("sha256").update("presented-cookie-token").digest("hex"),
+    );
   });
 });

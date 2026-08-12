@@ -1,5 +1,6 @@
 import { createHash, randomBytes as nodeRandomBytes, scrypt, timingSafeEqual } from "node:crypto";
 import type { PasswordHasher, SessionTokenIssuer } from "./register-owner.js";
+import type { SessionTokenHasher } from "./session-services.js";
 
 export interface ScryptParameters {
   blockSize: number;
@@ -130,5 +131,11 @@ export class RandomSessionTokenIssuer implements SessionTokenIssuer {
     const rawToken = this.randomBytes(32).toString("base64url");
     const tokenHash = createHash("sha256").update(rawToken).digest("hex");
     return { rawToken, tokenHash };
+  }
+}
+
+export class Sha256SessionTokenHasher implements SessionTokenHasher {
+  hash(rawToken: string): string {
+    return createHash("sha256").update(rawToken).digest("hex");
   }
 }

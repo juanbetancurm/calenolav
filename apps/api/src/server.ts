@@ -1,8 +1,18 @@
 import { Pool } from "pg";
 import { buildApp } from "./app.js";
 import { PostgresOwnerRegistrationRepository } from "./auth/postgres-owner-registration.js";
+import { PostgresSessionRepository } from "./auth/postgres-session-repository.js";
 import { RegisterOwnerService } from "./auth/register-owner.js";
-import { RandomSessionTokenIssuer, ScryptPasswordHasher } from "./auth/security.js";
+import {
+  RandomSessionTokenIssuer,
+  ScryptPasswordHasher,
+  Sha256SessionTokenHasher,
+} from "./auth/security.js";
+import {
+  AuthenticateSessionService,
+  SignInService,
+  SignOutService,
+} from "./auth/session-services.js";
 import { loadEnvironmentFile, readConfig } from "./config.js";
 import { createPostgresReadinessCheck } from "./readiness.js";
 
@@ -16,12 +26,40 @@ const pool = new Pool({
   max: 10,
 });
 
+const clock = () => new Date();
+const sessionDurationMs = 30 * 24 * 60 * 60 * 1_000;
+const passwordHasher = new ScryptPasswordHasher();
+const sessionTokenIssuer = new RandomSessionTokenIssuer();
+const sessionTokenHasher = new Sha256SessionTokenHasher();
+const sessionRepository = new PostgresSessionRepository(pool);
+const dummyPasswordHash = await passwordHasher.hash(
+  "dummy password used only to equalize sign-in work",
+);
+
 const registerOwner = new RegisterOwnerService({
-  clock: () => new Date(),
-  passwordHasher: new ScryptPasswordHasher(),
+  clock,
+  passwordHasher,
   repository: new PostgresOwnerRegistrationRepository(pool),
-  sessionDurationMs: 30 * 24 * 60 * 60 * 1_000,
-  sessionTokenIssuer: new RandomSessionTokenIssuer(),
+  sessionDurationMs,
+  sessionTokenIssuer,
+});
+const signIn = new SignInService({
+  clock,
+  dummyPasswordHash,
+  passwordVerifier: passwordHasher,
+  repository: sessionRepository,
+  sessionDurationMs,
+  sessionTokenIssuer,
+});
+const authenticateSession = new AuthenticateSessionService({
+  clock,
+  repository: sessionRepository,
+  sessionTokenHasher,
+});
+const signOut = new SignOutService({
+  clock,
+  repository: sessionRepository,
+  sessionTokenHasher,
 });
 
 const app = buildApp({
@@ -30,6 +68,12 @@ const app = buildApp({
   registration: {
     registerOwner,
     secureCookies: config.secureCookies,
+  },
+  sessions: {
+    authenticateSession,
+    secureCookies: config.secureCookies,
+    signIn,
+    signOut,
   },
 });
 

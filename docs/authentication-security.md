@@ -19,3 +19,10 @@ Each session uses 32 cryptographically random bytes encoded as base64url. The ra
 Secure cookies default to enabled. `COOKIE_SECURE=false` is allowed only for deliberate local HTTP development; deployed environments must terminate TLS and retain the default.
 
 Registration creates the user, tenant, owner membership, and session inside one PostgreSQL transaction. Unique email or slug conflicts roll back every write and return one generic response.
+## Sign-in and session lifecycle
+
+Sign-in normalizes the email address but passes the password unchanged to scrypt. Unknown accounts and incorrect passwords return the same `invalid_credentials` response. A valid dummy scrypt hash is checked when an account is absent so both paths perform comparable password work.
+
+Sessions expire after 30 days. Authenticated lookup hashes the presented cookie, rejects missing, expired, or revoked sessions with one `invalid_session` response, records `last_seen_at`, and returns only the user's identity and tenant memberships. Tenant authorization requires both a matching tenant identifier and a sufficient membership role.
+
+Sign-out stores the first revocation time, remains safe to repeat, clears the cookie, sends `Clear-Site-Data`, and prevents the response from being cached. Registration, sign-in, session lookup, and sign-out responses all use `Cache-Control: no-store`.

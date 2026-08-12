@@ -50,6 +50,7 @@ export const registerRegistrationRoutes: FastifyPluginAsync<
       },
     },
     async (request, reply) => {
+      reply.header("Cache-Control", "no-store");
       try {
         const result = await options.registerOwner.execute(request.body);
         reply.setCookie("calenolav_session", result.sessionToken, {

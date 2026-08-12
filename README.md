@@ -21,7 +21,7 @@ This modular-monolith design keeps one deployable backend while separating domai
 | 1 | Repository conventions and a healthy PostgreSQL container | Complete |
 | 2 | Tests-first initial relational schema and migrations | Complete |
 | 3 | Typed backend skeleton with health/readiness endpoints | Complete |
-| 4 | Owner registration, secure sessions, and tenant isolation | In progress |
+| 4 | Owner registration, secure sessions, and tenant isolation | Complete |
 | 5 | Google OAuth connection and encrypted token storage | Planned |
 | 6 | Availability rules and privacy-safe public availability API | Planned |
 | 7 | Conflict-safe booking and Google event creation | Planned |
@@ -50,3 +50,6 @@ These contracts are written as Fastify injection tests before route implementati
 Registration is implemented as an application use case before adding its HTTP and PostgreSQL adapters. The use case validates and normalizes public identity data, delegates password hashing, creates one user + tenant + owner membership + session atomically, and returns the raw session token only to the caller. Only its hash is eligible for database storage.
 
 While password authentication is the only factor, passwords require 15–128 Unicode code points. All printable characters and spaces are allowed, and no character-composition rule is imposed. This follows current NIST single-factor guidance while still permitting long passphrases.
+The API now supports `POST /auth/register`, `POST /auth/sign-in`, `GET /auth/session`, and `POST /auth/sign-out`. Successful authentication stores the raw session token only in a hardened cookie; PostgreSQL stores its SHA-256 digest. Session lookup returns a tenant-aware principal, and authorization compares the requested tenant and required role against that principal.
+
+Sign-in deliberately returns one generic failure for an unknown email or incorrect password and performs scrypt verification in both cases. Sign-out revokes server-side state, clears the browser cookie, and is safe to repeat.

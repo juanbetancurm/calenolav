@@ -53,6 +53,7 @@ describe("POST /auth/register", () => {
       userId: "00000000-0000-4000-8000-000000000001",
     });
     expect(response.body).not.toContain("raw-token-must-not-enter-json");
+    expect(response.headers["cache-control"]).toBe("no-store");
     const cookie = response.headers["set-cookie"];
     expect(cookie).toContain("calenolav_session=raw-token-must-not-enter-json");
     expect(cookie).toContain("HttpOnly");

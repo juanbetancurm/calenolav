@@ -52,7 +52,7 @@ afterEach(async () => {
 });
 
 afterAll(async () => {
-  client.release();
+  client?.release();
   await pool.end();
 });
 

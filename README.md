@@ -56,3 +56,5 @@ Sign-in deliberately returns one generic failure for an unknown email or incorre
 ## Step 5: Google Calendar connection
 
 The OAuth boundary starts with two relational records. A short-lived authorization attempt stores only a digest of the CSRF state and an encrypted PKCE verifier. A completed tenant connection stores Google account identity, the scopes actually granted, the selected calendar, and an encrypted refresh-token envelope. Short-lived Google access tokens are not persisted.
+
+Sensitive OAuth values use AES-256-GCM with a fresh IV and tenant-specific authenticated context. Environment configuration supplies a versioned key ring: the current key encrypts new values, while retained older versions allow safe decryption during key rotation. Keys never belong in PostgreSQL or Git.

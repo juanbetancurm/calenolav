@@ -5,13 +5,17 @@
 Google Calendar authorization is initiated only after a signed-in owner explicitly chooses to connect a calendar. The backend will request offline access so scheduled availability checks and bookings can continue when the owner is absent. Every authorization request uses a cryptographically random `state` value and a PKCE verifier.
 
 The database stores only the SHA-256 digest of `state`. The PKCE verifier must be recovered for the authorization-code exchange, so it is stored as an authenticated-encryption envelope during the short-lived attempt. An attempt belongs to an existing `(tenant_id, user_id)` membership and must expire after it is created.
+## Authorization start endpoint
+
+`POST /tenants/:tenantId/google/oauth/start` requires a valid server-side session and an owner membership for that exact tenant. It creates a ten-minute attempt and responds with `303 See Other`; the Google authorization URL is carried only in the `Location` header. Responses use `Cache-Control: no-store` and `Referrer-Policy: no-referrer`.
+
+The production route is registered only when client ID, redirect URI, current key version, and key ring are all configured. Supplying only part of that set stops startup with a structural error. Omitting the entire set keeps Google OAuth disabled and the route unavailable.
 
 ## Token storage
 
 Google refresh tokens are long-lived credentials and are encrypted at rest. The schema stores separate ciphertext, 96-bit IV, 128-bit authentication tag, and key-version fields. Key material is never stored in PostgreSQL or committed to Git; local development will load it from the ignored environment file and production will use a secret manager.
 
 Short-lived access tokens are not persisted. They will be obtained from Google when needed and kept only in process memory. Disconnecting a calendar must revoke the Google grant when possible and permanently delete the local connection.
-
 
 ## Encryption keys and rotation
 

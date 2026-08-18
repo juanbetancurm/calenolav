@@ -16,7 +16,7 @@ interface SessionRoutesOptions {
   signOut: Pick<SignOutService, "execute">;
 }
 
-const sessionCookieName = "calenolav_session";
+export const SESSION_COOKIE_NAME = "calenolav_session";
 const signInBodySchema = {
   type: "object",
   additionalProperties: false,
@@ -44,7 +44,7 @@ export const registerSessionRoutes: FastifyPluginAsync<SessionRoutesOptions> = a
       preventCaching(reply);
       try {
         const result = await options.signIn.execute(request.body);
-        reply.setCookie(sessionCookieName, result.sessionToken, {
+        reply.setCookie(SESSION_COOKIE_NAME, result.sessionToken, {
           expires: result.expiresAt,
           httpOnly: true,
           path: "/",
@@ -63,7 +63,7 @@ export const registerSessionRoutes: FastifyPluginAsync<SessionRoutesOptions> = a
 
   app.get("/auth/session", async (request, reply) => {
     preventCaching(reply);
-    const rawToken = request.cookies[sessionCookieName];
+    const rawToken = request.cookies[SESSION_COOKIE_NAME];
     if (!rawToken) {
       return reply.code(401).send({ error: { code: "invalid_session" } });
     }
@@ -80,12 +80,12 @@ export const registerSessionRoutes: FastifyPluginAsync<SessionRoutesOptions> = a
 
   app.post("/auth/sign-out", async (request, reply) => {
     preventCaching(reply);
-    const rawToken = request.cookies[sessionCookieName];
+    const rawToken = request.cookies[SESSION_COOKIE_NAME];
     if (rawToken) {
       await options.signOut.execute(rawToken);
     }
 
-    reply.clearCookie(sessionCookieName, {
+    reply.clearCookie(SESSION_COOKIE_NAME, {
       httpOnly: true,
       path: "/",
       sameSite: "lax",

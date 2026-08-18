@@ -7,11 +7,17 @@ import type {
   SignInService,
   SignOutService,
 } from "./auth/session-services.js";
+import type { BeginGoogleOAuthService } from "./google/oauth-authorization.js";
+import { registerGoogleOAuthRoutes } from "./google/oauth-routes.js";
 import type { ReadinessCheck } from "./readiness.js";
 
 export type { ReadinessCheck } from "./readiness.js";
 
 export interface BuildAppOptions {
+  googleOAuth?: {
+    authenticateSession: Pick<AuthenticateSessionService, "execute">;
+    beginGoogleOAuth: Pick<BeginGoogleOAuthService, "execute">;
+  };
   logger?: boolean;
   readinessCheck: ReadinessCheck;
   registration?: {
@@ -53,6 +59,10 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
 
   if (options.sessions) {
     void app.register(registerSessionRoutes, options.sessions);
+  }
+
+  if (options.googleOAuth) {
+    void app.register(registerGoogleOAuthRoutes, options.googleOAuth);
   }
 
   app.get(

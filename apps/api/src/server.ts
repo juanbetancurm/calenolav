@@ -14,6 +14,9 @@ import {
   SignOutService,
 } from "./auth/session-services.js";
 import { loadEnvironmentFile, readConfig } from "./config.js";
+import { BeginGoogleOAuthService } from "./google/oauth-authorization.js";
+import { PostgresGoogleOAuthAttemptRepository } from "./google/postgres-oauth-attempt-repository.js";
+import { Aes256GcmSecretBox } from "./google/secret-box.js";
 import { createPostgresReadinessCheck } from "./readiness.js";
 
 loadEnvironmentFile();
@@ -61,8 +64,24 @@ const signOut = new SignOutService({
   repository: sessionRepository,
   sessionTokenHasher,
 });
+const googleOAuth = config.googleOAuth
+  ? {
+      authenticateSession,
+      beginGoogleOAuth: new BeginGoogleOAuthService({
+        attemptDurationMs: 10 * 60 * 1_000,
+        clientId: config.googleOAuth.clientId,
+        clock,
+        redirectUri: config.googleOAuth.redirectUri,
+        repository: new PostgresGoogleOAuthAttemptRepository(pool),
+        secretEncryptor: new Aes256GcmSecretBox(
+          config.googleOAuth.encryptionKeyRing,
+        ),
+      }),
+    }
+  : null;
 
 const app = buildApp({
+  ...(googleOAuth ? { googleOAuth } : {}),
   logger: true,
   readinessCheck: createPostgresReadinessCheck(async (statement) => pool.query(statement)),
   registration: {

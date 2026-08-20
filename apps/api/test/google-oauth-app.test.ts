@@ -10,7 +10,7 @@ afterEach(async () => {
 });
 
 describe("Google OAuth app-factory wiring", () => {
-  it("registers the authenticated redirect route when dependencies are supplied", async () => {
+  it("registers authorization start and callback when dependencies are supplied", async () => {
     const principal = {
       email: "owner@example.com",
       memberships: [{ role: "owner" as const, tenantId }],
@@ -21,40 +21,58 @@ describe("Google OAuth app-factory wiring", () => {
       authorizationUrl:
         "https://accounts.google.com/o/oauth2/v2/auth?client_id=test&state=opaque",
     }));
+    const completeGoogleOAuth = vi.fn(async () => ({ tenantId }));
     const app = buildApp({
       googleOAuth: {
         authenticateSession: { execute: authenticateSession },
         beginGoogleOAuth: { execute: beginGoogleOAuth },
+        completeGoogleOAuth: { execute: completeGoogleOAuth },
       },
       logger: false,
       readinessCheck: async () => undefined,
     });
     apps.push(app);
 
-    const response = await app.inject({
+    const startResponse = await app.inject({
       method: "POST",
       url: `/tenants/${tenantId}/google/oauth/start`,
       cookies: { calenolav_session: "presented-session-token" },
     });
 
-    expect(response.statusCode).toBe(303);
+    expect(startResponse.statusCode).toBe(303);
     expect(authenticateSession).toHaveBeenCalledWith("presented-session-token");
     expect(beginGoogleOAuth).toHaveBeenCalledWith({ principal, tenantId });
+
+    const callbackResponse = await app.inject({
+      method: "GET",
+      url: "/google/oauth/callback?code=authorization-code&state=opaque-state",
+    });
+
+    expect(callbackResponse.statusCode).toBe(200);
+    expect(completeGoogleOAuth).toHaveBeenCalledWith({
+      code: "authorization-code",
+      state: "opaque-state",
+    });
   });
 
-  it("does not expose the redirect route when Google OAuth is disabled", async () => {
+  it("does not expose OAuth routes when Google OAuth is disabled", async () => {
     const app = buildApp({
       logger: false,
       readinessCheck: async () => undefined,
     });
     apps.push(app);
 
-    const response = await app.inject({
+    const startResponse = await app.inject({
       method: "POST",
       url: `/tenants/${tenantId}/google/oauth/start`,
       cookies: { calenolav_session: "presented-session-token" },
     });
+    const callbackResponse = await app.inject({
+      method: "GET",
+      url: "/google/oauth/callback?code=authorization-code&state=opaque-state",
+    });
 
-    expect(response.statusCode).toBe(404);
+    expect(startResponse.statusCode).toBe(404);
+    expect(callbackResponse.statusCode).toBe(404);
   });
 });

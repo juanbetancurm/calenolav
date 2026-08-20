@@ -9,6 +9,7 @@ type Environment = Readonly<Record<string, string | undefined>>;
 
 export interface GoogleOAuthConfig {
   clientId: string;
+  clientSecret: string;
   encryptionKeyRing: EncryptionKeyRingConfig;
   redirectUri: string;
 }
@@ -23,12 +24,13 @@ export interface ApiConfig {
 
 function readGoogleOAuthConfig(environment: Environment): GoogleOAuthConfig | null {
   const clientId = environment.GOOGLE_OAUTH_CLIENT_ID?.trim();
+  const clientSecret = environment.GOOGLE_OAUTH_CLIENT_SECRET?.trim();
   const redirectUri = environment.GOOGLE_OAUTH_REDIRECT_URI?.trim();
   const currentKeyVersion =
     environment.OAUTH_ENCRYPTION_CURRENT_KEY_VERSION?.trim();
   const encryptionKeys = environment.OAUTH_ENCRYPTION_KEYS?.trim();
   const hasAnyGoogleOAuthValue = Boolean(
-    clientId || redirectUri || currentKeyVersion || encryptionKeys,
+    clientId || clientSecret || redirectUri || currentKeyVersion || encryptionKeys,
   );
 
   if (!hasAnyGoogleOAuthValue) {
@@ -44,9 +46,15 @@ function readGoogleOAuthConfig(environment: Environment): GoogleOAuthConfig | nu
       "GOOGLE_OAUTH_REDIRECT_URI is required when Google OAuth is configured.",
     );
   }
+  if (!clientSecret) {
+    throw new Error(
+      "GOOGLE_OAUTH_CLIENT_SECRET is required when Google OAuth is configured.",
+    );
+  }
 
   return {
     clientId,
+    clientSecret,
     encryptionKeyRing: readEncryptionKeyRingConfig(environment),
     redirectUri,
   };

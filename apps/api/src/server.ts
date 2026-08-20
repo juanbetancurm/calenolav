@@ -15,7 +15,10 @@ import {
 } from "./auth/session-services.js";
 import { loadEnvironmentFile, readConfig } from "./config.js";
 import { BeginGoogleOAuthService } from "./google/oauth-authorization.js";
+import { CompleteGoogleOAuthService } from "./google/oauth-callback.js";
+import { GoogleOAuthCodeClient } from "./google/google-oauth-client.js";
 import { PostgresGoogleOAuthAttemptRepository } from "./google/postgres-oauth-attempt-repository.js";
+import { PostgresGoogleOAuthCallbackRepository } from "./google/postgres-oauth-callback-repository.js";
 import { Aes256GcmSecretBox } from "./google/secret-box.js";
 import { createPostgresReadinessCheck } from "./readiness.js";
 
@@ -64,20 +67,34 @@ const signOut = new SignOutService({
   repository: sessionRepository,
   sessionTokenHasher,
 });
-const googleOAuth = config.googleOAuth
-  ? {
-      authenticateSession,
-      beginGoogleOAuth: new BeginGoogleOAuthService({
-        attemptDurationMs: 10 * 60 * 1_000,
-        clientId: config.googleOAuth.clientId,
-        clock,
-        redirectUri: config.googleOAuth.redirectUri,
-        repository: new PostgresGoogleOAuthAttemptRepository(pool),
-        secretEncryptor: new Aes256GcmSecretBox(
-          config.googleOAuth.encryptionKeyRing,
-        ),
-      }),
-    }
+const googleOAuthConfig = config.googleOAuth;
+const googleOAuth = googleOAuthConfig
+  ? (() => {
+      const secretBox = new Aes256GcmSecretBox(
+        googleOAuthConfig.encryptionKeyRing,
+      );
+      return {
+        authenticateSession,
+        beginGoogleOAuth: new BeginGoogleOAuthService({
+          attemptDurationMs: 10 * 60 * 1_000,
+          clientId: googleOAuthConfig.clientId,
+          clock,
+          redirectUri: googleOAuthConfig.redirectUri,
+          repository: new PostgresGoogleOAuthAttemptRepository(pool),
+          secretEncryptor: secretBox,
+        }),
+        completeGoogleOAuth: new CompleteGoogleOAuthService({
+          clock,
+          googleClient: new GoogleOAuthCodeClient({
+            clientId: googleOAuthConfig.clientId,
+            clientSecret: googleOAuthConfig.clientSecret,
+            redirectUri: googleOAuthConfig.redirectUri,
+          }),
+          repository: new PostgresGoogleOAuthCallbackRepository(pool),
+          secretBox,
+        }),
+      };
+    })()
   : null;
 
 const app = buildApp({

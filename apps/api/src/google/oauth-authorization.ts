@@ -10,6 +10,13 @@ export const GOOGLE_CALENDAR_SCOPES = [
   "https://www.googleapis.com/auth/calendar.events.owned",
 ] as const;
 
+export const GOOGLE_IDENTITY_SCOPES = ["openid", "email"] as const;
+
+export const GOOGLE_OAUTH_SCOPES = [
+  ...GOOGLE_IDENTITY_SCOPES,
+  ...GOOGLE_CALENDAR_SCOPES,
+] as const;
+
 export interface SecretEncryptor {
   encrypt(secret: string, context: string): EncryptedSecret;
 }
@@ -149,7 +156,7 @@ export class BeginGoogleOAuthService {
     authorizationUrl.searchParams.set("client_id", this.clientId);
     authorizationUrl.searchParams.set("redirect_uri", this.redirectUri);
     authorizationUrl.searchParams.set("response_type", "code");
-    authorizationUrl.searchParams.set("scope", GOOGLE_CALENDAR_SCOPES.join(" "));
+    authorizationUrl.searchParams.set("scope", GOOGLE_OAUTH_SCOPES.join(" "));
     authorizationUrl.searchParams.set("access_type", "offline");
     authorizationUrl.searchParams.set("include_granted_scopes", "true");
     authorizationUrl.searchParams.set("state", rawState);

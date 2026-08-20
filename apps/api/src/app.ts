@@ -8,6 +8,7 @@ import type {
   SignOutService,
 } from "./auth/session-services.js";
 import type { BeginGoogleOAuthService } from "./google/oauth-authorization.js";
+import type { CompleteGoogleOAuthService } from "./google/oauth-callback.js";
 import { registerGoogleOAuthRoutes } from "./google/oauth-routes.js";
 import type { ReadinessCheck } from "./readiness.js";
 
@@ -17,6 +18,7 @@ export interface BuildAppOptions {
   googleOAuth?: {
     authenticateSession: Pick<AuthenticateSessionService, "execute">;
     beginGoogleOAuth: Pick<BeginGoogleOAuthService, "execute">;
+    completeGoogleOAuth: Pick<CompleteGoogleOAuthService, "execute">;
   };
   logger?: boolean;
   readinessCheck: ReadinessCheck;

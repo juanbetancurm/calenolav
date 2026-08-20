@@ -39,6 +39,7 @@ describe("API configuration", () => {
     const config = readConfig({
       DATABASE_URL: "postgresql://example",
       GOOGLE_OAUTH_CLIENT_ID: "google-client-id.apps.googleusercontent.com",
+      GOOGLE_OAUTH_CLIENT_SECRET: "synthetic-client-secret",
       GOOGLE_OAUTH_REDIRECT_URI: "https://api.calenolav.example/google/oauth/callback",
       OAUTH_ENCRYPTION_CURRENT_KEY_VERSION: "1",
       OAUTH_ENCRYPTION_KEYS: `1:${encryptionKey}`,
@@ -46,12 +47,38 @@ describe("API configuration", () => {
 
     expect(config.googleOAuth).toEqual({
       clientId: "google-client-id.apps.googleusercontent.com",
+      clientSecret: "synthetic-client-secret",
       encryptionKeyRing: {
         currentKeyVersion: 1,
         keys: new Map([[1, Buffer.alloc(32, 17)]]),
       },
       redirectUri: "https://api.calenolav.example/google/oauth/callback",
     });
+  });
+
+  it("requires the client secret as part of complete OAuth configuration", () => {
+    const encryptionKey = Buffer.alloc(32, 17).toString("base64url");
+
+    expect(() =>
+      readConfig({
+        DATABASE_URL: "postgresql://example",
+        GOOGLE_OAUTH_CLIENT_ID: "google-client-id.apps.googleusercontent.com",
+        GOOGLE_OAUTH_REDIRECT_URI:
+          "https://api.calenolav.example/google/oauth/callback",
+        OAUTH_ENCRYPTION_CURRENT_KEY_VERSION: "1",
+        OAUTH_ENCRYPTION_KEYS: `1:${encryptionKey}`,
+      }),
+    ).toThrow(
+      "GOOGLE_OAUTH_CLIENT_SECRET is required when Google OAuth is configured",
+    );
+    expect(() =>
+      readConfig({
+        DATABASE_URL: "postgresql://example",
+        GOOGLE_OAUTH_CLIENT_SECRET: "synthetic-client-secret",
+      }),
+    ).toThrow(
+      "GOOGLE_OAUTH_CLIENT_ID is required when Google OAuth is configured",
+    );
   });
 
   it("rejects partial Google OAuth configuration", () => {

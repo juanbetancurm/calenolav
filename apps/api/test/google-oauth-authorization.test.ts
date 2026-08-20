@@ -93,7 +93,7 @@ describe("BeginGoogleOAuthService", () => {
       include_granted_scopes: "true",
       redirect_uri: "https://api.calenolav.example/google/oauth/callback",
       response_type: "code",
-      scope: GOOGLE_CALENDAR_SCOPES.join(" "),
+      scope: ["openid", "email", ...GOOGLE_CALENDAR_SCOPES].join(" "),
       state: rawState,
     });
     expect(authorizationUrl.searchParams.get("prompt")).toBeNull();

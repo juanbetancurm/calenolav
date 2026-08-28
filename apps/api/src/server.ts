@@ -14,9 +14,14 @@ import {
   SignOutService,
 } from "./auth/session-services.js";
 import { loadEnvironmentFile, readConfig } from "./config.js";
+import {
+  DisconnectGoogleCalendarService,
+  GetGoogleCalendarConnectionStatusService,
+} from "./google/connection-services.js";
 import { BeginGoogleOAuthService } from "./google/oauth-authorization.js";
 import { CompleteGoogleOAuthService } from "./google/oauth-callback.js";
 import { GoogleOAuthCodeClient } from "./google/google-oauth-client.js";
+import { PostgresGoogleCalendarConnectionManagementRepository } from "./google/postgres-connection-management-repository.js";
 import { PostgresGoogleOAuthAttemptRepository } from "./google/postgres-oauth-attempt-repository.js";
 import { PostgresGoogleOAuthCallbackRepository } from "./google/postgres-oauth-callback-repository.js";
 import { Aes256GcmSecretBox } from "./google/secret-box.js";
@@ -67,6 +72,17 @@ const signOut = new SignOutService({
   repository: sessionRepository,
   sessionTokenHasher,
 });
+const googleConnectionRepository =
+  new PostgresGoogleCalendarConnectionManagementRepository(pool);
+const googleConnectionManagement = {
+  authenticateSession,
+  disconnectGoogleCalendar: new DisconnectGoogleCalendarService({
+    repository: googleConnectionRepository,
+  }),
+  getConnectionStatus: new GetGoogleCalendarConnectionStatusService({
+    repository: googleConnectionRepository,
+  }),
+};
 const googleOAuthConfig = config.googleOAuth;
 const googleOAuth = googleOAuthConfig
   ? (() => {
@@ -98,6 +114,7 @@ const googleOAuth = googleOAuthConfig
   : null;
 
 const app = buildApp({
+  googleConnectionManagement,
   ...(googleOAuth ? { googleOAuth } : {}),
   logger: true,
   readinessCheck: createPostgresReadinessCheck(async (statement) => pool.query(statement)),

@@ -7,6 +7,11 @@ import type {
   SignInService,
   SignOutService,
 } from "./auth/session-services.js";
+import type {
+  DisconnectGoogleCalendarService,
+  GetGoogleCalendarConnectionStatusService,
+} from "./google/connection-services.js";
+import { registerGoogleConnectionRoutes } from "./google/connection-routes.js";
 import type { BeginGoogleOAuthService } from "./google/oauth-authorization.js";
 import type { CompleteGoogleOAuthService } from "./google/oauth-callback.js";
 import { registerGoogleOAuthRoutes } from "./google/oauth-routes.js";
@@ -15,6 +20,14 @@ import type { ReadinessCheck } from "./readiness.js";
 export type { ReadinessCheck } from "./readiness.js";
 
 export interface BuildAppOptions {
+  googleConnectionManagement?: {
+    authenticateSession: Pick<AuthenticateSessionService, "execute">;
+    disconnectGoogleCalendar: Pick<DisconnectGoogleCalendarService, "execute">;
+    getConnectionStatus: Pick<
+      GetGoogleCalendarConnectionStatusService,
+      "execute"
+    >;
+  };
   googleOAuth?: {
     authenticateSession: Pick<AuthenticateSessionService, "execute">;
     beginGoogleOAuth: Pick<BeginGoogleOAuthService, "execute">;
@@ -61,6 +74,13 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
 
   if (options.sessions) {
     void app.register(registerSessionRoutes, options.sessions);
+  }
+
+  if (options.googleConnectionManagement) {
+    void app.register(
+      registerGoogleConnectionRoutes,
+      options.googleConnectionManagement,
+    );
   }
 
   if (options.googleOAuth) {

@@ -16,4 +16,8 @@ The owner HTTP boundary rejects malformed tenant identifiers and unexpected poli
 
 ## Public privacy boundary
 
-The future public availability response will expose only bookable candidate timestamps inside the configured notice and horizon. Google Calendar busy intervals will be treated as opaque time ranges: event titles, attendees, descriptions, calendar identifiers, and raw provider responses must never enter the public contract.
+Candidate slots are calculated on demand and never materialized in PostgreSQL. Minimum notice advances by elapsed minutes, while the booking horizon advances by tenant-local calendar days. Slot duration is elapsed time: nonexistent wall times disappear during spring-forward, and both occurrences of repeated wall times become distinct UTC candidates during fall-back.
+
+Busy input is limited to opaque start/end ranges. True overlap removes a candidate, while intervals that only touch a slot boundary do not. Event titles, attendees, descriptions, calendar identifiers, and raw provider responses must never enter the calculator or future public contract.
+
+The future public availability response will expose only the resulting bookable UTC timestamps inside the configured notice and horizon.

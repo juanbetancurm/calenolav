@@ -25,6 +25,7 @@ interface GoogleOAuthSdkClient {
     code: string;
     codeVerifier: string;
   }): Promise<{ tokens: GoogleTokenResponse }>;
+  revokeToken(token: string): Promise<unknown>;
   verifyIdToken(input: {
     audience: string;
     idToken: string;
@@ -61,6 +62,7 @@ function createOfficialClient(
 
   return {
     getToken: (input) => client.getToken(input),
+    revokeToken: (token) => client.revokeToken(token),
     verifyIdToken: (input) => client.verifyIdToken(input),
   };
 }
@@ -149,6 +151,14 @@ export class GoogleOAuthCodeClient implements GoogleAuthorizationCodeClient {
         },
         refreshToken: tokens.refresh_token ?? null,
       };
+    } catch {
+      throw new GoogleOAuthProtocolError();
+    }
+  }
+
+  async revokeGrant(refreshToken: string): Promise<void> {
+    try {
+      await this.client.revokeToken(refreshToken);
     } catch {
       throw new GoogleOAuthProtocolError();
     }

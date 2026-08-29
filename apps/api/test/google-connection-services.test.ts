@@ -24,11 +24,17 @@ const storedConnection = {
   ],
   updatedAt: new Date("2026-08-20T11:00:00.000Z"),
 };
+const storedRefreshToken = {
+  authTag: "synthetic-auth-tag",
+  ciphertext: "synthetic-ciphertext",
+  iv: "synthetic-iv",
+  keyVersion: 2,
+};
 
 function createRepository(): GoogleCalendarConnectionManagementRepository {
   return {
-    deleteConnection: vi.fn(async () => undefined),
     findConnectionStatus: vi.fn(async () => storedConnection),
+    takeConnectionForDisconnect: vi.fn(async () => null),
   };
 }
 
@@ -77,15 +83,68 @@ describe("GetGoogleCalendarConnectionStatusService", () => {
 });
 
 describe("DisconnectGoogleCalendarService", () => {
-  it("deletes only the selected tenant connection and is safe to repeat", async () => {
+  it("takes the local credential once, decrypts it in tenant context, and revokes the Google grant", async () => {
     const repository = createRepository();
-    const service = new DisconnectGoogleCalendarService({ repository });
+    vi.mocked(repository.takeConnectionForDisconnect).mockResolvedValueOnce({
+      refreshToken: storedRefreshToken,
+    });
+    const decrypt = vi.fn(() => "plain-refresh-token");
+    const revokeGrant = vi.fn(async () => undefined);
+    const service = new DisconnectGoogleCalendarService({
+      grantRevoker: { revokeGrant },
+      repository,
+      secretBox: { decrypt },
+    });
 
     await service.execute({ principal, tenantId });
     await service.execute({ principal, tenantId });
 
-    expect(repository.deleteConnection).toHaveBeenNthCalledWith(1, tenantId);
-    expect(repository.deleteConnection).toHaveBeenNthCalledWith(2, tenantId);
+    expect(repository.takeConnectionForDisconnect).toHaveBeenNthCalledWith(
+      1,
+      tenantId,
+    );
+    expect(repository.takeConnectionForDisconnect).toHaveBeenNthCalledWith(
+      2,
+      tenantId,
+    );
+    expect(decrypt).toHaveBeenCalledWith(
+      storedRefreshToken,
+      `google-refresh-token:${tenantId}`,
+    );
+    expect(revokeGrant).toHaveBeenCalledOnce();
+    expect(revokeGrant).toHaveBeenCalledWith("plain-refresh-token");
+  });
+
+  it("keeps local deletion successful when revocation is unavailable or Google rejects it", async () => {
+    const unavailableRepository = createRepository();
+    vi.mocked(
+      unavailableRepository.takeConnectionForDisconnect,
+    ).mockResolvedValueOnce({ refreshToken: storedRefreshToken });
+    const unavailableService = new DisconnectGoogleCalendarService({
+      repository: unavailableRepository,
+    });
+
+    await expect(
+      unavailableService.execute({ principal, tenantId }),
+    ).resolves.toBeUndefined();
+
+    const rejectedRepository = createRepository();
+    vi.mocked(rejectedRepository.takeConnectionForDisconnect).mockResolvedValueOnce({
+      refreshToken: storedRefreshToken,
+    });
+    const revokeGrant = vi.fn(async () => {
+      throw new Error("private provider response");
+    });
+    const rejectedService = new DisconnectGoogleCalendarService({
+      grantRevoker: { revokeGrant },
+      repository: rejectedRepository,
+      secretBox: { decrypt: () => "plain-refresh-token" },
+    });
+
+    await expect(
+      rejectedService.execute({ principal, tenantId }),
+    ).resolves.toBeUndefined();
+    expect(revokeGrant).toHaveBeenCalledOnce();
   });
 
   it("rejects an unauthorized tenant before deleting anything", async () => {
@@ -95,6 +154,6 @@ describe("DisconnectGoogleCalendarService", () => {
     await expect(
       service.execute({ principal, tenantId: otherTenantId }),
     ).rejects.toBeInstanceOf(AuthorizationError);
-    expect(repository.deleteConnection).not.toHaveBeenCalled();
+    expect(repository.takeConnectionForDisconnect).not.toHaveBeenCalled();
   });
 });

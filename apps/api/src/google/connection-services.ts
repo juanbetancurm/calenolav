@@ -2,6 +2,7 @@ import {
   requireTenantRole,
   type AuthenticatedPrincipal,
 } from "../auth/session-services.js";
+import type { EncryptedSecret } from "./secret-box.js";
 
 export interface GoogleCalendarConnectionStatusRecord {
   calendarId: string;
@@ -12,14 +13,26 @@ export interface GoogleCalendarConnectionStatusRecord {
 }
 
 export interface GoogleCalendarConnectionManagementRepository {
-  deleteConnection(tenantId: string): Promise<void>;
   findConnectionStatus(
     tenantId: string,
   ): Promise<GoogleCalendarConnectionStatusRecord | null>;
+  takeConnectionForDisconnect(
+    tenantId: string,
+  ): Promise<{ refreshToken: EncryptedSecret } | null>;
 }
 
 interface GoogleCalendarConnectionManagementDependencies {
   repository: GoogleCalendarConnectionManagementRepository;
+}
+
+interface DisconnectGoogleCalendarDependencies
+  extends GoogleCalendarConnectionManagementDependencies {
+  grantRevoker?: {
+    revokeGrant(refreshToken: string): Promise<void>;
+  };
+  secretBox?: {
+    decrypt(encrypted: EncryptedSecret, context: string): string;
+  };
 }
 
 export interface GoogleCalendarConnectionCommand {
@@ -68,11 +81,32 @@ export class GetGoogleCalendarConnectionStatusService {
 
 export class DisconnectGoogleCalendarService {
   constructor(
-    private readonly dependencies: GoogleCalendarConnectionManagementDependencies,
+    private readonly dependencies: DisconnectGoogleCalendarDependencies,
   ) {}
 
   async execute(command: GoogleCalendarConnectionCommand): Promise<void> {
     requireTenantRole(command.principal, command.tenantId, "owner");
-    await this.dependencies.repository.deleteConnection(command.tenantId);
+    const connection =
+      await this.dependencies.repository.takeConnectionForDisconnect(
+        command.tenantId,
+      );
+
+    if (
+      !connection ||
+      !this.dependencies.grantRevoker ||
+      !this.dependencies.secretBox
+    ) {
+      return;
+    }
+
+    try {
+      const refreshToken = this.dependencies.secretBox.decrypt(
+        connection.refreshToken,
+        `google-refresh-token:${command.tenantId}`,
+      );
+      await this.dependencies.grantRevoker.revokeGrant(refreshToken);
+    } catch {
+      // Local deletion is authoritative; provider revocation is best effort.
+    }
   }
 }

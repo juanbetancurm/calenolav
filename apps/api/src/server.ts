@@ -74,48 +74,56 @@ const signOut = new SignOutService({
 });
 const googleConnectionRepository =
   new PostgresGoogleCalendarConnectionManagementRepository(pool);
+const googleOAuthConfig = config.googleOAuth;
+const googleOAuthRuntime = googleOAuthConfig
+  ? (() => {
+      const secretBox = new Aes256GcmSecretBox(
+        googleOAuthConfig.encryptionKeyRing,
+      );
+      const googleClient = new GoogleOAuthCodeClient({
+        clientId: googleOAuthConfig.clientId,
+        clientSecret: googleOAuthConfig.clientSecret,
+        redirectUri: googleOAuthConfig.redirectUri,
+      });
+      return {
+        disconnectDependencies: {
+          grantRevoker: googleClient,
+          secretBox,
+        },
+        routes: {
+          authenticateSession,
+          beginGoogleOAuth: new BeginGoogleOAuthService({
+            attemptDurationMs: 10 * 60 * 1_000,
+            clientId: googleOAuthConfig.clientId,
+            clock,
+            redirectUri: googleOAuthConfig.redirectUri,
+            repository: new PostgresGoogleOAuthAttemptRepository(pool),
+            secretEncryptor: secretBox,
+          }),
+          completeGoogleOAuth: new CompleteGoogleOAuthService({
+            clock,
+            googleClient,
+            repository: new PostgresGoogleOAuthCallbackRepository(pool),
+            secretBox,
+          }),
+        },
+      };
+    })()
+  : null;
 const googleConnectionManagement = {
   authenticateSession,
   disconnectGoogleCalendar: new DisconnectGoogleCalendarService({
     repository: googleConnectionRepository,
+    ...(googleOAuthRuntime?.disconnectDependencies ?? {}),
   }),
   getConnectionStatus: new GetGoogleCalendarConnectionStatusService({
     repository: googleConnectionRepository,
   }),
 };
-const googleOAuthConfig = config.googleOAuth;
-const googleOAuth = googleOAuthConfig
-  ? (() => {
-      const secretBox = new Aes256GcmSecretBox(
-        googleOAuthConfig.encryptionKeyRing,
-      );
-      return {
-        authenticateSession,
-        beginGoogleOAuth: new BeginGoogleOAuthService({
-          attemptDurationMs: 10 * 60 * 1_000,
-          clientId: googleOAuthConfig.clientId,
-          clock,
-          redirectUri: googleOAuthConfig.redirectUri,
-          repository: new PostgresGoogleOAuthAttemptRepository(pool),
-          secretEncryptor: secretBox,
-        }),
-        completeGoogleOAuth: new CompleteGoogleOAuthService({
-          clock,
-          googleClient: new GoogleOAuthCodeClient({
-            clientId: googleOAuthConfig.clientId,
-            clientSecret: googleOAuthConfig.clientSecret,
-            redirectUri: googleOAuthConfig.redirectUri,
-          }),
-          repository: new PostgresGoogleOAuthCallbackRepository(pool),
-          secretBox,
-        }),
-      };
-    })()
-  : null;
 
 const app = buildApp({
   googleConnectionManagement,
-  ...(googleOAuth ? { googleOAuth } : {}),
+  ...(googleOAuthRuntime ? { googleOAuth: googleOAuthRuntime.routes } : {}),
   logger: true,
   readinessCheck: createPostgresReadinessCheck(async (statement) => pool.query(statement)),
   registration: {

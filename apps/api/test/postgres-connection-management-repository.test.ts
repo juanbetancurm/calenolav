@@ -89,7 +89,7 @@ describe.sequential("PostgresGoogleCalendarConnectionManagementRepository", () =
     await expect(repository.findConnectionStatus(tenantId)).resolves.toBeNull();
   });
 
-  it("deletes only the selected tenant connection and is safe to repeat", async () => {
+  it("atomically takes only the selected encrypted credential and is safe to repeat", async () => {
     const repository =
       new PostgresGoogleCalendarConnectionManagementRepository(pool);
     const selectedTenantId = await createTenantFixture();
@@ -107,8 +107,18 @@ describe.sequential("PostgresGoogleCalendarConnectionManagementRepository", () =
       updatedAt,
     });
 
-    await repository.deleteConnection(selectedTenantId);
-    await repository.deleteConnection(selectedTenantId);
+    const first = await repository.takeConnectionForDisconnect(selectedTenantId);
+    const repeated = await repository.takeConnectionForDisconnect(selectedTenantId);
+
+    expect(first).toEqual({
+      refreshToken: {
+        authTag: "DQ4PEBESExQVFhcYGRobHA",
+        ciphertext: "encrypted-refresh-token",
+        iv: "AQIDBAUGBwgJCgsM",
+        keyVersion: 2,
+      },
+    });
+    expect(repeated).toBeNull();
 
     const result = await pool.query<{ count: string; tenant_id: string }>(
       `SELECT tenant_id, count(*)::text AS count

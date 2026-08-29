@@ -22,7 +22,7 @@ This modular-monolith design keeps one deployable backend while separating domai
 | 2 | Tests-first initial relational schema and migrations | Complete |
 | 3 | Typed backend skeleton with health/readiness endpoints | Complete |
 | 4 | Owner registration, secure sessions, and tenant isolation | Complete |
-| 5 | Google OAuth connection and encrypted token storage | In progress |
+| 5 | Google OAuth connection and encrypted token storage | Complete |
 | 6 | Availability rules and privacy-safe public availability API | Planned |
 | 7 | Conflict-safe booking and Google event creation | Planned |
 | 8 | React owner and visitor experiences | Planned |
@@ -61,3 +61,5 @@ Sensitive OAuth values use AES-256-GCM with a fresh IV and tenant-specific authe
 An authenticated tenant owner can start authorization with `POST /tenants/:tenantId/google/oauth/start`. The backend creates a ten-minute encrypted attempt and returns a `303` redirect to Google with offline access, S256 PKCE, OpenID identity scopes, and the minimum free/busy plus owned-event Calendar scopes.
 
 Google returns to the public `GET /google/oauth/callback` endpoint. The backend consumes state once, recovers PKCE, exchanges the code, verifies the signed identity for the configured client, requires every Calendar scope, and upserts only an encrypted refresh token. OAuth routes remain absent when complete configuration is omitted, and callback failures return one privacy-safe response.
+
+Authenticated tenant owners can inspect safe connection metadata with `GET /tenants/:tenantId/google/connection` and disconnect with `DELETE /tenants/:tenantId/google/connection`. Disconnect atomically removes and returns the encrypted credential, then attempts to decrypt it in tenant context and revoke the Google grant. Local deletion remains successful and repeatable when OAuth is disabled, the credential cannot be opened, or Google rejects the revocation request.

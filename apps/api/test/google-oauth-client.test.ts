@@ -46,12 +46,13 @@ function createFixture(overrides?: {
       getPayload: () => payload ?? undefined,
     }),
   );
+  const revokeToken = vi.fn(async (_token: string) => undefined);
   const clientFactory = vi.fn(
     (_options: {
       clientId: string;
       clientSecret: string;
       redirectUri: string;
-    }) => ({ getToken, verifyIdToken }),
+    }) => ({ getToken, revokeToken, verifyIdToken }),
   );
   const client = new GoogleOAuthCodeClient({
     clientFactory,
@@ -60,7 +61,7 @@ function createFixture(overrides?: {
     redirectUri,
   });
 
-  return { client, clientFactory, getToken, verifyIdToken };
+  return { client, clientFactory, getToken, revokeToken, verifyIdToken };
 }
 
 async function expectProtocolFailure(promise: Promise<unknown>): Promise<void> {
@@ -119,6 +120,24 @@ describe("GoogleOAuthCodeClient", () => {
 
     expect(result).not.toHaveProperty("accessToken");
     expect(JSON.stringify(result)).not.toContain("short-lived-access-token");
+  });
+
+  it("revokes a refresh token through the official client and hides provider failures", async () => {
+    const success = createFixture();
+
+    await expect(
+      success.client.revokeGrant("long-lived-refresh-token"),
+    ).resolves.toBeUndefined();
+    expect(success.revokeToken).toHaveBeenCalledWith("long-lived-refresh-token");
+
+    const failure = createFixture();
+    failure.revokeToken.mockRejectedValueOnce(
+      new Error("private provider revocation response"),
+    );
+    const result = failure.client.revokeGrant("long-lived-refresh-token");
+
+    await expectProtocolFailure(result);
+    await expect(result).rejects.not.toThrow("private provider revocation response");
   });
 
   it("represents an omitted refresh token as null for the service to reject", async () => {

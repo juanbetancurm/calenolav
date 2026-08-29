@@ -21,7 +21,13 @@ The backend exchanges the code with PKCE, verifies the signed ID token for the c
 
 Google refresh tokens are long-lived credentials and are encrypted at rest. The schema stores separate ciphertext, 96-bit IV, 128-bit authentication tag, and key-version fields. Key material is never stored in PostgreSQL or committed to Git; local development will load it from the ignored environment file and production will use a secret manager.
 
-Short-lived access tokens are not persisted or returned by the OAuth adapter. Future Google Calendar calls will obtain them when needed and keep them only in process memory. Disconnecting a calendar must revoke the Google grant when possible and permanently delete the local connection.
+Short-lived access tokens are not persisted or returned by the OAuth adapter. Future Google Calendar calls will obtain them when needed and keep them only in process memory.
+
+## Connection status and disconnect
+
+`GET /tenants/:tenantId/google/connection` and `DELETE /tenants/:tenantId/google/connection` require a valid session and owner membership for that exact tenant. Status responses contain only account email, calendar ID, granted scopes, and connection timestamps; encrypted credential fields are never selected or serialized. Both responses disable caching and referrer disclosure.
+
+Disconnect uses one tenant-scoped `DELETE RETURNING` statement, so local credential removal is atomic, idempotent, and authoritative. When complete OAuth configuration is available, the returned envelope is opened with its tenant-specific refresh-token context and the official Google client attempts to revoke the grant. Missing configuration, decryption failure, or provider failure cannot restore the deleted row or expose provider details to the caller.
 
 ## Encryption keys and rotation
 

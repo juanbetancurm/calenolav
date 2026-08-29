@@ -15,6 +15,11 @@ import {
 } from "drizzle-orm/pg-core";
 
 export const tenantRole = pgEnum("tenant_role", ["owner", "member"]);
+export const bookingStatus = pgEnum("booking_status", [
+  "pending",
+  "confirmed",
+  "failed",
+]);
 
 export const users = pgTable(
   "users",
@@ -166,6 +171,53 @@ export const weeklyAvailabilityWindows = pgTable(
   ],
 );
 
+export const bookings = pgTable(
+  "bookings",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    idempotencyKey: uuid("idempotency_key").notNull(),
+    attendeeName: varchar("attendee_name", { length: 120 }).notNull(),
+    attendeeEmail: varchar("attendee_email", { length: 320 }).notNull(),
+    startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+    endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
+    status: bookingStatus("status").default("pending").notNull(),
+    googleEventId: text("google_event_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("bookings_tenant_idempotency_unique").on(
+      table.tenantId,
+      table.idempotencyKey,
+    ),
+    index("bookings_tenant_starts_at_index").on(table.tenantId, table.startsAt),
+    check(
+      "bookings_attendee_name_not_blank",
+      sql`length(trim(${table.attendeeName})) > 0`,
+    ),
+    check(
+      "bookings_attendee_email_format",
+      sql`${table.attendeeEmail} ~ '^[^[:space:]@]+@[^[:space:]@]+[.][^[:space:]@]+$'`,
+    ),
+    check("bookings_interval_positive", sql`${table.endsAt} > ${table.startsAt}`),
+    check(
+      "bookings_interval_limit",
+      sql`${table.endsAt} <= ${table.startsAt} + interval '8 hours'`,
+    ),
+    check(
+      "bookings_five_minute_grid",
+      sql`mod(extract(epoch from ${table.startsAt})::bigint, 300) = 0 and mod(extract(epoch from ${table.endsAt})::bigint, 300) = 0`,
+    ),
+    check(
+      "bookings_event_state",
+      sql`(${table.status} = 'confirmed' and ${table.googleEventId} is not null and length(trim(${table.googleEventId})) > 0) or (${table.status} in ('pending', 'failed') and ${table.googleEventId} is null)`,
+    ),
+  ],
+);
+
 export const googleCalendarConnections = pgTable(
   "google_calendar_connections",
   {
@@ -280,3 +332,5 @@ export type AvailabilityPolicy = typeof availabilityPolicies.$inferSelect;
 export type NewAvailabilityPolicy = typeof availabilityPolicies.$inferInsert;
 export type WeeklyAvailabilityWindow = typeof weeklyAvailabilityWindows.$inferSelect;
 export type NewWeeklyAvailabilityWindow = typeof weeklyAvailabilityWindows.$inferInsert;
+export type Booking = typeof bookings.$inferSelect;
+export type NewBooking = typeof bookings.$inferInsert;

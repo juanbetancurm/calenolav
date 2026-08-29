@@ -24,7 +24,7 @@ This modular-monolith design keeps one deployable backend while separating domai
 | 4 | Owner registration, secure sessions, and tenant isolation | Complete |
 | 5 | Google OAuth connection and encrypted token storage | Complete |
 | 6 | Availability rules and privacy-safe public availability API | Complete |
-| 7 | Conflict-safe booking and Google event creation | Planned |
+| 7 | Conflict-safe booking and Google event creation | In progress |
 | 8 | React owner and visitor experiences | Planned |
 | 9 | Sync jobs, webhooks, observability, and failure recovery | Planned |
 | 10 | End-to-end tests, production containers, CI, and deployment | Planned |
@@ -73,3 +73,9 @@ Authenticated tenant owners can read and replace the complete policy with `GET /
 Derived slots are deliberately not stored. A pure calculator expands persisted rules into fixed-duration UTC candidates, applies elapsed minimum notice, advances the horizon by tenant-local calendar days, handles daylight-saving gaps and repeated times, and subtracts only opaque busy intervals.
 
 Visitors can read `GET /public/:slug/availability` without a session. The backend opens the tenant-scoped refresh token only in memory, gives each request a fresh credential-isolated Google client, asks FreeBusy for opaque ranges, and returns UTC slot timestamps only. Missing configuration is indistinguishable from an unknown public tenant, provider failures return a generic unavailable response, and empty schedules avoid credential recovery and Google entirely.
+
+## Step 7: conflict-safe booking
+
+Public booking input now has one canonical representation: normalized tenant and attendee identity, a UUIDv4 idempotency key, and an explicit UTC start on the five-minute grid. Slot duration remains server-owned through the tenant policy rather than visitor input.
+
+The booking ledger uses tenant-scoped idempotency and a PostgreSQL `btree_gist` exclusion constraint over half-open UTC ranges. Pending and confirmed reservations cannot overlap for the same tenant even under concurrent requests; failed attempts release the interval and touching slot boundaries remain valid. Google event creation and the public booking route come next.

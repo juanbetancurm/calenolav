@@ -15,6 +15,13 @@
       "when": 1786570435967,
       "tag": "0001_tan_spectrum",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1787963220947,
+      "tag": "0002_narrow_vivisector",
+      "breakpoints": true
     }
   ]
 }

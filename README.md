@@ -23,7 +23,7 @@ This modular-monolith design keeps one deployable backend while separating domai
 | 3 | Typed backend skeleton with health/readiness endpoints | Complete |
 | 4 | Owner registration, secure sessions, and tenant isolation | Complete |
 | 5 | Google OAuth connection and encrypted token storage | Complete |
-| 6 | Availability rules and privacy-safe public availability API | Planned |
+| 6 | Availability rules and privacy-safe public availability API | In progress |
 | 7 | Conflict-safe booking and Google event creation | Planned |
 | 8 | React owner and visitor experiences | Planned |
 | 9 | Sync jobs, webhooks, observability, and failure recovery | Planned |
@@ -63,3 +63,9 @@ An authenticated tenant owner can start authorization with `POST /tenants/:tenan
 Google returns to the public `GET /google/oauth/callback` endpoint. The backend consumes state once, recovers PKCE, exchanges the code, verifies the signed identity for the configured client, requires every Calendar scope, and upserts only an encrypted refresh token. OAuth routes remain absent when complete configuration is omitted, and callback failures return one privacy-safe response.
 
 Authenticated tenant owners can inspect safe connection metadata with `GET /tenants/:tenantId/google/connection` and disconnect with `DELETE /tenants/:tenantId/google/connection`. Disconnect atomically removes and returns the encrypted credential, then attempts to decrypt it in tenant context and revoke the Google grant. Local deletion remains successful and repeatable when OAuth is disabled, the credential cannot be opened, or Google rejects the revocation request.
+
+## Step 6: availability rules
+
+Availability starts with one tenant policy containing an IANA time zone, slot duration, minimum notice, and booking horizon. Separate weekly windows use ISO weekdays and five-minute local-time boundaries. The application canonicalizes and rejects overlapping windows before persistence, while PostgreSQL enforces tenant ownership, structural limits, uniqueness, and cascade cleanup.
+
+Derived slots are deliberately not stored. The next slice will combine these rules with opaque Google busy intervals and expose only privacy-safe candidate timestamps through the public availability API.

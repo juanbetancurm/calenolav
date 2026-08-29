@@ -90,6 +90,82 @@ export const sessions = pgTable(
   ],
 );
 
+export const availabilityPolicies = pgTable(
+  "availability_policies",
+  {
+    tenantId: uuid("tenant_id")
+      .primaryKey()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    timeZone: varchar("time_zone", { length: 100 }).notNull(),
+    slotDurationMinutes: integer("slot_duration_minutes").notNull(),
+    minimumNoticeMinutes: integer("minimum_notice_minutes").notNull(),
+    bookingWindowDays: integer("booking_window_days").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    check(
+      "availability_policies_time_zone_not_blank",
+      sql`length(trim(${table.timeZone})) > 0`,
+    ),
+    check(
+      "availability_policies_slot_duration_limits",
+      sql`${table.slotDurationMinutes} between 5 and 480 and ${table.slotDurationMinutes} % 5 = 0`,
+    ),
+    check(
+      "availability_policies_minimum_notice_limits",
+      sql`${table.minimumNoticeMinutes} between 0 and 43200 and ${table.minimumNoticeMinutes} % 5 = 0`,
+    ),
+    check(
+      "availability_policies_booking_window_limits",
+      sql`${table.bookingWindowDays} between 1 and 365`,
+    ),
+  ],
+);
+
+export const weeklyAvailabilityWindows = pgTable(
+  "weekly_availability_windows",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => availabilityPolicies.tenantId, { onDelete: "cascade" }),
+    weekday: integer("weekday").notNull(),
+    startMinute: integer("start_minute").notNull(),
+    endMinute: integer("end_minute").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("weekly_availability_windows_exact_unique").on(
+      table.tenantId,
+      table.weekday,
+      table.startMinute,
+      table.endMinute,
+    ),
+    index("weekly_availability_windows_tenant_weekday_index").on(
+      table.tenantId,
+      table.weekday,
+      table.startMinute,
+    ),
+    check(
+      "weekly_availability_windows_weekday_limits",
+      sql`${table.weekday} between 1 and 7`,
+    ),
+    check(
+      "weekly_availability_windows_start_minute_limits",
+      sql`${table.startMinute} between 0 and 1439 and ${table.startMinute} % 5 = 0`,
+    ),
+    check(
+      "weekly_availability_windows_end_minute_limits",
+      sql`${table.endMinute} between 1 and 1440 and ${table.endMinute} % 5 = 0`,
+    ),
+    check(
+      "weekly_availability_windows_positive_duration",
+      sql`${table.endMinute} > ${table.startMinute}`,
+    ),
+  ],
+);
+
 export const googleCalendarConnections = pgTable(
   "google_calendar_connections",
   {
@@ -200,3 +276,7 @@ export type GoogleCalendarConnection = typeof googleCalendarConnections.$inferSe
 export type NewGoogleCalendarConnection = typeof googleCalendarConnections.$inferInsert;
 export type GoogleOauthAttempt = typeof googleOauthAttempts.$inferSelect;
 export type NewGoogleOauthAttempt = typeof googleOauthAttempts.$inferInsert;
+export type AvailabilityPolicy = typeof availabilityPolicies.$inferSelect;
+export type NewAvailabilityPolicy = typeof availabilityPolicies.$inferInsert;
+export type WeeklyAvailabilityWindow = typeof weeklyAvailabilityWindows.$inferSelect;
+export type NewWeeklyAvailabilityWindow = typeof weeklyAvailabilityWindows.$inferInsert;

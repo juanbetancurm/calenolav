@@ -24,7 +24,7 @@ This modular-monolith design keeps one deployable backend while separating domai
 | 4 | Owner registration, secure sessions, and tenant isolation | Complete |
 | 5 | Google OAuth connection and encrypted token storage | Complete |
 | 6 | Availability rules and privacy-safe public availability API | Complete |
-| 7 | Conflict-safe booking and Google event creation | In progress |
+| 7 | Conflict-safe booking and Google event creation | Complete |
 | 8 | React owner and visitor experiences | Planned |
 | 9 | Sync jobs, webhooks, observability, and failure recovery | Planned |
 | 10 | End-to-end tests, production containers, CI, and deployment | Planned |
@@ -78,4 +78,6 @@ Visitors can read `GET /public/:slug/availability` without a session. The backen
 
 Public booking input now has one canonical representation: normalized tenant and attendee identity, a UUIDv4 idempotency key, and an explicit UTC start on the five-minute grid. Slot duration remains server-owned through the tenant policy rather than visitor input.
 
-The booking ledger uses tenant-scoped idempotency and a PostgreSQL `btree_gist` exclusion constraint over half-open UTC ranges. Pending and confirmed reservations cannot overlap for the same tenant even under concurrent requests; failed attempts release the interval and touching slot boundaries remain valid. Google event creation and the public booking route come next.
+The booking ledger uses tenant-scoped idempotency and a PostgreSQL `btree_gist` exclusion constraint over half-open UTC ranges. Pending and confirmed reservations cannot overlap for the same tenant even under concurrent requests; failed attempts release the interval and touching slot boundaries remain valid.
+
+Before reserving, the backend reloads current policy and connection state and rechecks the requested slot against fresh opaque Google FreeBusy ranges. `POST /public/:slug/bookings` then atomically reserves the interval, creates one minimal Google event with an ID derived from the booking UUID, and confirms the row. Provider failure releases a new reservation, while a post-event database failure stays pending for safe reconciliation. Public responses expose only confirmed booking identity and UTC times.

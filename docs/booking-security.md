@@ -12,4 +12,14 @@ PostgreSQL stores the minimum data needed to coordinate event creation: tenant, 
 
 The `btree_gist` exclusion constraint combines tenant equality with a half-open timestamp range. Pending and confirmed bookings cannot overlap for one tenant, touching boundaries remain valid, and failed attempts release the interval. This database decision closes the race between concurrent requests that cannot be closed reliably with an application read followed by an insert.
 
-Bookings cascade with tenant deletion. The application will still revalidate current policy and Google FreeBusy before attempting a reservation, but PostgreSQL remains the final local concurrency authority.
+Bookings cascade with tenant deletion. Immediately before reservation, the application reloads current policy and connection state, recovers the refresh token only in tenant context, and recalculates the requested slot against a fresh opaque FreeBusy response. PostgreSQL remains the final local concurrency authority.
+
+## Provider event boundary
+
+Google receives one minimal event containing a generic summary, the attendee email, and the confirmed UTC interval. The provider event identifier is deterministically derived from the booking UUID, allowing uncertain retries and later reconciliation to converge on the same external event without storing an access token.
+
+If event creation fails, the new pending row becomes failed and releases its interval. If Google accepts the event but the confirmation update fails, the row deliberately remains pending: releasing it could allow a second booking over an event that already exists. A later recovery process can reconcile that deterministic event safely.
+
+## Public HTTP boundary
+
+Visitors create bookings with `POST /public/:slug/bookings` and do not need a session. Strict path and body schemas run before the application service. Successful responses contain only the booking ID, confirmed state, and UTC interval; validation, missing destinations, conflicts, and dependency failures use stable privacy-safe status codes with no-store and no-referrer headers.

@@ -7,6 +7,8 @@ import {
 import { PostgresAvailabilityPolicyRepository } from "./availability/postgres-policy-repository.js";
 import { PostgresPublicAvailabilityRepository } from "./availability/postgres-public-availability-repository.js";
 import { GetPublicAvailabilityService } from "./availability/public-availability-service.js";
+import { CreateBookingService } from "./booking/create-booking-service.js";
+import { PostgresBookingRepository } from "./booking/postgres-booking-repository.js";
 import { PostgresOwnerRegistrationRepository } from "./auth/postgres-owner-registration.js";
 import { PostgresSessionRepository } from "./auth/postgres-session-repository.js";
 import { RegisterOwnerService } from "./auth/register-owner.js";
@@ -27,6 +29,7 @@ import {
 } from "./google/connection-services.js";
 import { BeginGoogleOAuthService } from "./google/oauth-authorization.js";
 import { CompleteGoogleOAuthService } from "./google/oauth-callback.js";
+import { GoogleCalendarEventClient } from "./google/google-event-client.js";
 import { GoogleCalendarFreeBusyClient } from "./google/google-freebusy-client.js";
 import { GoogleOAuthCodeClient } from "./google/google-oauth-client.js";
 import { PostgresGoogleCalendarConnectionManagementRepository } from "./google/postgres-connection-management-repository.js";
@@ -98,6 +101,12 @@ const googleOAuthRuntime = googleOAuthConfig
         clientId: googleOAuthConfig.clientId,
         clientSecret: googleOAuthConfig.clientSecret,
       });
+      const eventClient = new GoogleCalendarEventClient({
+        clientId: googleOAuthConfig.clientId,
+        clientSecret: googleOAuthConfig.clientSecret,
+      });
+      const publicAvailabilityRepository =
+        new PostgresPublicAvailabilityRepository(pool);
       return {
         disconnectDependencies: {
           grantRevoker: googleClient,
@@ -124,7 +133,17 @@ const googleOAuthRuntime = googleOAuthConfig
           getAvailability: new GetPublicAvailabilityService({
             clock,
             freeBusyClient,
-            repository: new PostgresPublicAvailabilityRepository(pool),
+            repository: publicAvailabilityRepository,
+            secretBox,
+          }),
+        },
+        publicBooking: {
+          createBooking: new CreateBookingService({
+            availabilityRepository: publicAvailabilityRepository,
+            bookingRepository: new PostgresBookingRepository(pool),
+            clock,
+            eventClient,
+            freeBusyClient,
             secretBox,
           }),
         },
@@ -158,6 +177,9 @@ const app = buildApp({
   ...(googleOAuthRuntime ? { googleOAuth: googleOAuthRuntime.routes } : {}),
   ...(googleOAuthRuntime
     ? { publicAvailability: googleOAuthRuntime.publicAvailability }
+    : {}),
+  ...(googleOAuthRuntime
+    ? { publicBooking: googleOAuthRuntime.publicBooking }
     : {}),
   logger: true,
   readinessCheck: createPostgresReadinessCheck(async (statement) => pool.query(statement)),

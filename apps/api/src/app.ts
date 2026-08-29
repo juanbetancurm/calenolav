@@ -14,6 +14,8 @@ import type {
   SignInService,
   SignOutService,
 } from "./auth/session-services.js";
+import type { CreateBookingService } from "./booking/create-booking-service.js";
+import { registerPublicBookingRoutes } from "./booking/public-booking-route.js";
 import type {
   DisconnectGoogleCalendarService,
   GetGoogleCalendarConnectionStatusService,
@@ -48,6 +50,9 @@ export interface BuildAppOptions {
   logger?: boolean;
   publicAvailability?: {
     getAvailability: Pick<GetPublicAvailabilityService, "execute">;
+  };
+  publicBooking?: {
+    createBooking: Pick<CreateBookingService, "execute">;
   };
   readinessCheck: ReadinessCheck;
   registration?: {
@@ -111,6 +116,10 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
       registerPublicAvailabilityRoutes,
       options.publicAvailability,
     );
+  }
+
+  if (options.publicBooking) {
+    void app.register(registerPublicBookingRoutes, options.publicBooking);
   }
 
   app.get(

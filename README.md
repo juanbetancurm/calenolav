@@ -23,7 +23,7 @@ This modular-monolith design keeps one deployable backend while separating domai
 | 3 | Typed backend skeleton with health/readiness endpoints | Complete |
 | 4 | Owner registration, secure sessions, and tenant isolation | Complete |
 | 5 | Google OAuth connection and encrypted token storage | Complete |
-| 6 | Availability rules and privacy-safe public availability API | In progress |
+| 6 | Availability rules and privacy-safe public availability API | Complete |
 | 7 | Conflict-safe booking and Google event creation | Planned |
 | 8 | React owner and visitor experiences | Planned |
 | 9 | Sync jobs, webhooks, observability, and failure recovery | Planned |
@@ -70,4 +70,6 @@ Availability starts with one tenant policy containing an IANA time zone, slot du
 
 Authenticated tenant owners can read and replace the complete policy with `GET /tenants/:tenantId/availability-policy` and `PUT /tenants/:tenantId/availability-policy`. Replacement updates the settings and all weekly windows in one transaction, so a late constraint failure preserves the prior policy. Responses disable caching and referrer disclosure, and malformed or unexpected input is rejected before session authentication.
 
-Derived slots are deliberately not stored. A pure calculator expands persisted rules into fixed-duration UTC candidates, applies elapsed minimum notice, advances the horizon by tenant-local calendar days, handles daylight-saving gaps and repeated times, and subtracts only opaque busy intervals. The next slice will obtain those ranges from Google FreeBusy and expose only privacy-safe timestamps through the public availability API.
+Derived slots are deliberately not stored. A pure calculator expands persisted rules into fixed-duration UTC candidates, applies elapsed minimum notice, advances the horizon by tenant-local calendar days, handles daylight-saving gaps and repeated times, and subtracts only opaque busy intervals.
+
+Visitors can read `GET /public/:slug/availability` without a session. The backend opens the tenant-scoped refresh token only in memory, gives each request a fresh credential-isolated Google client, asks FreeBusy for opaque ranges, and returns UTC slot timestamps only. Missing configuration is indistinguishable from an unknown public tenant, provider failures return a generic unavailable response, and empty schedules avoid credential recovery and Google entirely.

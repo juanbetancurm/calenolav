@@ -5,6 +5,8 @@ import {
   ReplaceTenantAvailabilityPolicyService,
 } from "./availability/policy-services.js";
 import { PostgresAvailabilityPolicyRepository } from "./availability/postgres-policy-repository.js";
+import { PostgresPublicAvailabilityRepository } from "./availability/postgres-public-availability-repository.js";
+import { GetPublicAvailabilityService } from "./availability/public-availability-service.js";
 import { PostgresOwnerRegistrationRepository } from "./auth/postgres-owner-registration.js";
 import { PostgresSessionRepository } from "./auth/postgres-session-repository.js";
 import { RegisterOwnerService } from "./auth/register-owner.js";
@@ -25,6 +27,7 @@ import {
 } from "./google/connection-services.js";
 import { BeginGoogleOAuthService } from "./google/oauth-authorization.js";
 import { CompleteGoogleOAuthService } from "./google/oauth-callback.js";
+import { GoogleCalendarFreeBusyClient } from "./google/google-freebusy-client.js";
 import { GoogleOAuthCodeClient } from "./google/google-oauth-client.js";
 import { PostgresGoogleCalendarConnectionManagementRepository } from "./google/postgres-connection-management-repository.js";
 import { PostgresGoogleOAuthAttemptRepository } from "./google/postgres-oauth-attempt-repository.js";
@@ -91,6 +94,10 @@ const googleOAuthRuntime = googleOAuthConfig
         clientSecret: googleOAuthConfig.clientSecret,
         redirectUri: googleOAuthConfig.redirectUri,
       });
+      const freeBusyClient = new GoogleCalendarFreeBusyClient({
+        clientId: googleOAuthConfig.clientId,
+        clientSecret: googleOAuthConfig.clientSecret,
+      });
       return {
         disconnectDependencies: {
           grantRevoker: googleClient,
@@ -110,6 +117,14 @@ const googleOAuthRuntime = googleOAuthConfig
             clock,
             googleClient,
             repository: new PostgresGoogleOAuthCallbackRepository(pool),
+            secretBox,
+          }),
+        },
+        publicAvailability: {
+          getAvailability: new GetPublicAvailabilityService({
+            clock,
+            freeBusyClient,
+            repository: new PostgresPublicAvailabilityRepository(pool),
             secretBox,
           }),
         },
@@ -141,6 +156,9 @@ const app = buildApp({
   availabilityPolicy,
   googleConnectionManagement,
   ...(googleOAuthRuntime ? { googleOAuth: googleOAuthRuntime.routes } : {}),
+  ...(googleOAuthRuntime
+    ? { publicAvailability: googleOAuthRuntime.publicAvailability }
+    : {}),
   logger: true,
   readinessCheck: createPostgresReadinessCheck(async (statement) => pool.query(statement)),
   registration: {

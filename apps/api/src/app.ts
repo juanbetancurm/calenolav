@@ -1,4 +1,6 @@
 import Fastify, { type FastifyInstance } from "fastify";
+import { registerPublicAvailabilityRoutes } from "./availability/public-availability-route.js";
+import type { GetPublicAvailabilityService } from "./availability/public-availability-service.js";
 import { registerAvailabilityPolicyRoutes } from "./availability/policy-routes.js";
 import type {
   GetTenantAvailabilityPolicyService,
@@ -44,6 +46,9 @@ export interface BuildAppOptions {
     completeGoogleOAuth: Pick<CompleteGoogleOAuthService, "execute">;
   };
   logger?: boolean;
+  publicAvailability?: {
+    getAvailability: Pick<GetPublicAvailabilityService, "execute">;
+  };
   readinessCheck: ReadinessCheck;
   registration?: {
     registerOwner: Pick<RegisterOwnerService, "execute">;
@@ -99,6 +104,13 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
 
   if (options.googleOAuth) {
     void app.register(registerGoogleOAuthRoutes, options.googleOAuth);
+  }
+
+  if (options.publicAvailability) {
+    void app.register(
+      registerPublicAvailabilityRoutes,
+      options.publicAvailability,
+    );
   }
 
   app.get(

@@ -18,6 +18,8 @@ The owner HTTP boundary rejects malformed tenant identifiers and unexpected poli
 
 Candidate slots are calculated on demand and never materialized in PostgreSQL. Minimum notice advances by elapsed minutes, while the booking horizon advances by tenant-local calendar days. Slot duration is elapsed time: nonexistent wall times disappear during spring-forward, and both occurrences of repeated wall times become distinct UTC candidates during fall-back.
 
-Busy input is limited to opaque start/end ranges. True overlap removes a candidate, while intervals that only touch a slot boundary do not. Event titles, attendees, descriptions, calendar identifiers, and raw provider responses must never enter the calculator or future public contract.
+Busy input is limited to opaque start/end ranges. True overlap removes a candidate, while intervals that only touch a slot boundary do not. Event titles, attendees, descriptions, calendar identifiers, and raw provider responses never enter the calculator or public contract.
 
-The future public availability response will expose only the resulting bookable UTC timestamps inside the configured notice and horizon.
+The public source query requires a tenant to have both a policy and a Google connection with the FreeBusy scope. Its encrypted refresh token is opened only with tenant-specific authenticated context and is passed to a fresh Google SDK client for one request, preventing mutable credentials from being shared across concurrent tenants. Empty weekly schedules return without decryption or provider access.
+
+`GET /public/:slug/availability` exposes only resulting bookable UTC timestamps inside the configured notice and horizon. Unknown or incompletely configured tenants share one `404`, dependency failures share one `503`, malformed slugs are rejected before application work, and every response disables caching and referrer disclosure.

@@ -15,6 +15,11 @@ export interface AvailabilitySlot {
   startAt: Date;
 }
 
+export interface AvailabilityQueryRange {
+  endAt: Date;
+  startAt: Date;
+}
+
 interface CalculateAvailableSlotsInput {
   busyIntervals: readonly BusyInterval[];
   now: Date;
@@ -36,6 +41,37 @@ interface NumericInterval {
 
 function invalidCalculation(): never {
   throw new AvailabilityCalculationError();
+}
+
+export function calculateAvailabilityQueryRange(input: {
+  now: Date;
+  policy: AvailabilityPolicy;
+}): AvailabilityQueryRange {
+  const nowMilliseconds = input.now.getTime();
+  if (!Number.isFinite(nowMilliseconds)) invalidCalculation();
+
+  const policy = normalizeAvailabilityPolicy(input.policy);
+  try {
+    const now = Temporal.Instant.fromEpochMilliseconds(nowMilliseconds);
+    return {
+      endAt: new Date(
+        Number(
+          now
+            .toZonedDateTimeISO(policy.timeZone)
+            .add({ days: policy.bookingWindowDays })
+            .toInstant().epochMilliseconds,
+        ),
+      ),
+      startAt: new Date(
+        Number(
+          now.add({ minutes: policy.minimumNoticeMinutes }).epochMilliseconds,
+        ),
+      ),
+    };
+  } catch (error) {
+    if (error instanceof AvailabilityCalculationError) throw error;
+    invalidCalculation();
+  }
 }
 
 function toNumericBusyIntervals(
@@ -140,12 +176,11 @@ export function calculateAvailableSlots(
   const busyIntervals = toNumericBusyIntervals(input.busyIntervals);
 
   try {
-    const now = Temporal.Instant.fromEpochMilliseconds(nowMilliseconds);
-    const earliest = now.add({ minutes: policy.minimumNoticeMinutes });
-    const horizon = now
-      .toZonedDateTimeISO(policy.timeZone)
-      .add({ days: policy.bookingWindowDays })
-      .toInstant();
+    const range = calculateAvailabilityQueryRange({ now: input.now, policy });
+    const earliest = Temporal.Instant.fromEpochMilliseconds(
+      range.startAt.getTime(),
+    );
+    const horizon = Temporal.Instant.fromEpochMilliseconds(range.endAt.getTime());
     const finalDate = horizon.toZonedDateTimeISO(policy.timeZone).toPlainDate();
     const slots: AvailabilitySlot[] = [];
 

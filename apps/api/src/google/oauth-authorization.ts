@@ -5,8 +5,11 @@ import {
 } from "../auth/session-services.js";
 import type { EncryptedSecret } from "./secret-box.js";
 
+export const GOOGLE_CALENDAR_FREEBUSY_SCOPE =
+  "https://www.googleapis.com/auth/calendar.freebusy";
+
 export const GOOGLE_CALENDAR_SCOPES = [
-  "https://www.googleapis.com/auth/calendar.freebusy",
+  GOOGLE_CALENDAR_FREEBUSY_SCOPE,
   "https://www.googleapis.com/auth/calendar.events.owned",
 ] as const;
 

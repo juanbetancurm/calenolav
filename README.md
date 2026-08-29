@@ -68,4 +68,6 @@ Authenticated tenant owners can inspect safe connection metadata with `GET /tena
 
 Availability starts with one tenant policy containing an IANA time zone, slot duration, minimum notice, and booking horizon. Separate weekly windows use ISO weekdays and five-minute local-time boundaries. The application canonicalizes and rejects overlapping windows before persistence, while PostgreSQL enforces tenant ownership, structural limits, uniqueness, and cascade cleanup.
 
-Derived slots are deliberately not stored. The next slice will combine these rules with opaque Google busy intervals and expose only privacy-safe candidate timestamps through the public availability API.
+Authenticated tenant owners can read and replace the complete policy with `GET /tenants/:tenantId/availability-policy` and `PUT /tenants/:tenantId/availability-policy`. Replacement updates the settings and all weekly windows in one transaction, so a late constraint failure preserves the prior policy. Responses disable caching and referrer disclosure, and malformed or unexpected input is rejected before session authentication.
+
+Derived slots are deliberately not stored. The next slice will calculate candidates from these persisted rules, combine them with opaque Google busy intervals, and expose only privacy-safe timestamps through the public availability API.

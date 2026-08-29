@@ -1,4 +1,9 @@
 import Fastify, { type FastifyInstance } from "fastify";
+import { registerAvailabilityPolicyRoutes } from "./availability/policy-routes.js";
+import type {
+  GetTenantAvailabilityPolicyService,
+  ReplaceTenantAvailabilityPolicyService,
+} from "./availability/policy-services.js";
 import type { RegisterOwnerService } from "./auth/register-owner.js";
 import { registerRegistrationRoutes } from "./auth/registration-routes.js";
 import { registerSessionRoutes } from "./auth/session-routes.js";
@@ -20,6 +25,11 @@ import type { ReadinessCheck } from "./readiness.js";
 export type { ReadinessCheck } from "./readiness.js";
 
 export interface BuildAppOptions {
+  availabilityPolicy?: {
+    authenticateSession: Pick<AuthenticateSessionService, "execute">;
+    getPolicy: Pick<GetTenantAvailabilityPolicyService, "execute">;
+    replacePolicy: Pick<ReplaceTenantAvailabilityPolicyService, "execute">;
+  };
   googleConnectionManagement?: {
     authenticateSession: Pick<AuthenticateSessionService, "execute">;
     disconnectGoogleCalendar: Pick<DisconnectGoogleCalendarService, "execute">;
@@ -67,6 +77,10 @@ const readyResponseSchema = {
 
 export function buildApp(options: BuildAppOptions): FastifyInstance {
   const app = Fastify({ logger: options.logger ?? false });
+
+  if (options.availabilityPolicy) {
+    void app.register(registerAvailabilityPolicyRoutes, options.availabilityPolicy);
+  }
 
   if (options.registration) {
     void app.register(registerRegistrationRoutes, options.registration);

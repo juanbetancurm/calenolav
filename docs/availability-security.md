@@ -10,6 +10,10 @@ Weekly windows use ISO weekdays `1` through `7` and local minutes from the start
 
 PostgreSQL stores policy inputs rather than derived future slots. A policy belongs to one real tenant, and its weekly windows belong to that policy; tenant deletion cascades through both levels. Database checks enforce numeric limits, positive windows, grid alignment, and exact-row uniqueness. Cross-row overlap and IANA semantics remain application validations because they depend on the complete policy rather than one row.
 
+Policy reads and complete replacements require an authenticated owner membership for the exact tenant before repository access. Replacement upserts the settings, deletes prior windows, and inserts the canonical new windows in one transaction. Any late database failure rolls back every part of the replacement and preserves the previously committed policy.
+
+The owner HTTP boundary rejects malformed tenant identifiers and unexpected policy or window properties before authentication. Successful and expected-error responses use `Cache-Control: no-store` and `Referrer-Policy: no-referrer`; the API returns policy inputs only and never exposes membership, session, OAuth, or Google event data.
+
 ## Public privacy boundary
 
 The future public availability response will expose only bookable candidate timestamps inside the configured notice and horizon. Google Calendar busy intervals will be treated as opaque time ranges: event titles, attendees, descriptions, calendar identifiers, and raw provider responses must never enter the public contract.

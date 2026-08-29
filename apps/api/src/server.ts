@@ -1,5 +1,10 @@
 import { Pool } from "pg";
 import { buildApp } from "./app.js";
+import {
+  GetTenantAvailabilityPolicyService,
+  ReplaceTenantAvailabilityPolicyService,
+} from "./availability/policy-services.js";
+import { PostgresAvailabilityPolicyRepository } from "./availability/postgres-policy-repository.js";
 import { PostgresOwnerRegistrationRepository } from "./auth/postgres-owner-registration.js";
 import { PostgresSessionRepository } from "./auth/postgres-session-repository.js";
 import { RegisterOwnerService } from "./auth/register-owner.js";
@@ -43,6 +48,7 @@ const passwordHasher = new ScryptPasswordHasher();
 const sessionTokenIssuer = new RandomSessionTokenIssuer();
 const sessionTokenHasher = new Sha256SessionTokenHasher();
 const sessionRepository = new PostgresSessionRepository(pool);
+const availabilityPolicyRepository = new PostgresAvailabilityPolicyRepository(pool);
 const dummyPasswordHash = await passwordHasher.hash(
   "dummy password used only to equalize sign-in work",
 );
@@ -121,7 +127,18 @@ const googleConnectionManagement = {
   }),
 };
 
+const availabilityPolicy = {
+  authenticateSession,
+  getPolicy: new GetTenantAvailabilityPolicyService({
+    repository: availabilityPolicyRepository,
+  }),
+  replacePolicy: new ReplaceTenantAvailabilityPolicyService({
+    repository: availabilityPolicyRepository,
+  }),
+};
+
 const app = buildApp({
+  availabilityPolicy,
   googleConnectionManagement,
   ...(googleOAuthRuntime ? { googleOAuth: googleOAuthRuntime.routes } : {}),
   logger: true,

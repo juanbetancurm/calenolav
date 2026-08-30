@@ -25,7 +25,7 @@ This modular-monolith design keeps one deployable backend while separating domai
 | 5 | Google OAuth connection and encrypted token storage | Complete |
 | 6 | Availability rules and privacy-safe public availability API | Complete |
 | 7 | Conflict-safe booking and Google event creation | Complete |
-| 8 | React owner and visitor experiences | Planned |
+| 8 | React owner and visitor experiences | In progress |
 | 9 | Sync jobs, webhooks, observability, and failure recovery | Planned |
 | 10 | End-to-end tests, production containers, CI, and deployment | Planned |
 
@@ -81,3 +81,11 @@ Public booking input now has one canonical representation: normalized tenant and
 The booking ledger uses tenant-scoped idempotency and a PostgreSQL `btree_gist` exclusion constraint over half-open UTC ranges. Pending and confirmed reservations cannot overlap for the same tenant even under concurrent requests; failed attempts release the interval and touching slot boundaries remain valid.
 
 Before reserving, the backend reloads current policy and connection state and rechecks the requested slot against fresh opaque Google FreeBusy ranges. `POST /public/:slug/bookings` then atomically reserves the interval, creates one minimal Google event with an ID derived from the booking UUID, and confirms the row. Provider failure releases a new reservation, while a post-event database failure stays pending for safe reconciliation. Public responses expose only confirmed booking identity and UTC times.
+
+## Step 8: React owner and visitor experiences
+
+The frontend begins with one strict React, Vite, and TypeScript workspace. Its typed API client sends credentials through the browser transport without exposing session tokens, accepts only the public availability and booking response shapes, and maps malformed failures to one safe browser error.
+
+The responsive application shell separates visitor scheduling from the owner workspace, rejects unsafe tenant paths locally, and uses semantic HTML without third-party fonts, images, analytics, or tracking requests. Interactive availability, booking, authentication, connection management, and policy editing remain in progress.
+
+Development uses exact shared Vite, Vitest, and Rolldown versions. On Windows systems where Application Control blocks native Rolldown modules, the version-matched WASI fallback preserves the enforced policy while keeping tests and production builds deterministic.

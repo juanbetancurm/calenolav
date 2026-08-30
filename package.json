@@ -20,7 +20,15 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present"
   },
+  "overrides": {
+    "rolldown": "1.2.3",
+    "vite": "8.2.1",
+    "vitest": "4.1.10"
+  },
   "allowScripts": {
     "esbuild": false
+  },
+  "devDependencies": {
+    "vitest": "4.1.10"
   }
 }

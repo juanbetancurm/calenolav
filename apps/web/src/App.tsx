@@ -1,7 +1,10 @@
 import { useEffect, type ReactNode } from "react";
+import { ApiClient } from "./api-client.js";
+import { VisitorBooking, type VisitorBookingClient } from "./visitor-booking.js";
 import "./styles.css";
 
 interface AppProps {
+  readonly apiClient?: VisitorBookingClient;
   readonly path?: string;
 }
 
@@ -11,6 +14,7 @@ interface PageFrameProps {
 }
 
 const safeTenantSlugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const defaultApiClient = new ApiClient();
 
 function PageFrame({ children, title }: PageFrameProps) {
   useEffect(() => {
@@ -99,7 +103,7 @@ function BookingLandingPage() {
   );
 }
 
-function VisitorBookingPage({ slug }: { readonly slug: string }) {
+function VisitorBookingPage({ client, slug }: { readonly client: VisitorBookingClient; readonly slug: string }) {
   const tenantName = slug.replaceAll("-", " ");
   return (
     <PageFrame title="Book an appointment | calenolav">
@@ -117,9 +121,8 @@ function VisitorBookingPage({ slug }: { readonly slug: string }) {
         <section className="booking-card" aria-labelledby="choose-time-heading">
           <div className="step-label">Step 1 of 2</div>
           <h2 id="choose-time-heading">Choose a time</h2>
-          <p className="subtle-copy">Available appointments will appear here.</p>
-          <div className="slot-skeleton" aria-hidden="true"><span /><span /><span /></div>
-          <p className="booking-hint">Select a time to continue with your details.</p>
+          <p className="subtle-copy">Select a current opening, then share only the details needed to confirm it.</p>
+          <VisitorBooking client={client} slug={slug} />
         </section>
       </section>
     </PageFrame>
@@ -166,7 +169,7 @@ function NotFoundPage() {
   );
 }
 
-export function App({ path }: AppProps) {
+export function App({ apiClient = defaultApiClient, path }: AppProps) {
   const currentPath = path ?? (typeof window === "undefined" ? "/" : window.location.pathname);
   if (currentPath === "/") return <HomePage />;
   if (currentPath === "/book") return <BookingLandingPage />;
@@ -175,7 +178,7 @@ export function App({ path }: AppProps) {
   const bookingMatch = /^\/book\/([^/]+)$/.exec(currentPath);
   const slug = bookingMatch?.[1];
   if (slug !== undefined && safeTenantSlugPattern.test(slug)) {
-    return <VisitorBookingPage slug={slug} />;
+    return <VisitorBookingPage client={apiClient} slug={slug} />;
   }
   return <NotFoundPage />;
 }

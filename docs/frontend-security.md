@@ -6,6 +6,8 @@ The browser client sends cookies with same-origin API requests so hardened owner
 
 API failures are reduced to a stable status and safe error code. Malformed bodies, network failures, and unexpected provider responses never become browser-visible internal detail. Public pages display UTC-derived availability and confirmed booking state only.
 
+The visitor flow generates one idempotency key when a slot is selected and keeps it stable across a safe retry. A conflict discards that selection and reloads current availability instead of repeating an uncertain provider side effect. Confirmation omits attendee identity and displays only the confirmed time.
+
 The app shell uses semantic HTML, keyboard-visible controls, local system fonts, and no third-party visual, analytics, or tracking asset. Unsafe tenant paths share one not-found view rather than reaching the API.
 
 Windows Application Control blocks Rolldown native modules in the development environment. The repository pins one compatible Vite, Vitest, and Rolldown set and records Rolldown's matching WASI fallback. This keeps machine policy enforced while allowing deterministic local tests and builds; production browser output contains neither the build runtime nor its environment settings.

@@ -86,6 +86,8 @@ Before reserving, the backend reloads current policy and connection state and re
 
 The frontend begins with one strict React, Vite, and TypeScript workspace. Its typed API client sends credentials through the browser transport without exposing session tokens, accepts only the public availability and booking response shapes, and maps malformed failures to one safe browser error.
 
-The responsive application shell separates visitor scheduling from the owner workspace, rejects unsafe tenant paths locally, and uses semantic HTML without third-party fonts, images, analytics, or tracking requests. Visitors can load current slots, submit only their own booking fields with one retry-stable idempotency key, receive a privacy-safe confirmation, and refresh after a booking conflict. Owner authentication, connection management, and policy editing remain in progress.
+The responsive application shell separates visitor scheduling from the owner workspace, rejects unsafe tenant paths locally, and uses semantic HTML without third-party fonts, images, analytics, or tracking requests. Visitors can load current slots, submit only their own booking fields with one retry-stable idempotency key, receive a privacy-safe confirmation, and refresh after a booking conflict.
+
+Owners can restore a hardened session, sign in and out, and load privacy-safe Google connection and availability summaries for an exact owner membership. The HttpOnly token never enters React, non-owner accounts cannot trigger tenant reads, and dependency failures expose one retryable state. Connection actions and policy editing remain in progress.
 
 Development uses exact shared Vite, Vitest, and Rolldown versions. On Windows systems where Application Control blocks native Rolldown modules, the version-matched WASI fallback preserves the enforced policy while keeping tests and production builds deterministic.

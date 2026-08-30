@@ -104,6 +104,17 @@ h1 { max-width: 760px; margin-bottom: 1.25rem; font-family: Georgia, "Times New 
 .owner-layout { align-items: center; }
 .owner-proof { display: inline-flex; gap: .6rem; align-items: center; color: var(--green); font-size: .9rem; font-weight: 700; }
 .owner-proof span { display: grid; width: 1.4rem; height: 1.4rem; place-items: center; border-radius: 50%; background: #dcece4; }
+.owner-status { padding: 1.4rem; border: 1px solid var(--line); border-radius: .7rem; background: var(--paper); color: var(--muted); line-height: 1.55; }
+.owner-status p { margin-bottom: 1rem; }
+.workspace-card { padding: clamp(1.4rem, 4vw, 2.2rem); border: 1px solid var(--line); border-radius: 1rem; background: var(--paper); box-shadow: 0 1.5rem 4rem rgba(50,43,30,.09); }
+.workspace-header { display: flex; align-items: start; justify-content: space-between; gap: 1rem; padding-bottom: 1.4rem; border-bottom: 1px solid var(--line); }
+.workspace-header h2 { margin-bottom: .4rem; font: 600 clamp(1.7rem, 3vw, 2.3rem) Georgia, serif; }
+.owner-email { margin: 0; color: var(--muted); overflow-wrap: anywhere; }
+.workspace-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin-top: 1.4rem; }
+.workspace-summary article { padding: 1.2rem; border-radius: .65rem; background: #f3f7f3; }
+.workspace-summary strong { display: block; margin-bottom: .5rem; }
+.workspace-summary article > p:last-child { margin: 0; color: var(--muted); font-size: .88rem; line-height: 1.5; }
+.summary-label { margin-bottom: .55rem; color: var(--green); font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .sign-in-card form { display: grid; gap: .6rem; }
 .sign-in-card label { margin-top: .6rem; font-size: .82rem; font-weight: 750; }
 .sign-in-card input { width: 100%; min-height: 3rem; padding: .75rem .85rem; border: 1px solid var(--line); border-radius: .4rem; background: white; color: var(--ink); }
@@ -129,6 +140,8 @@ h1 { max-width: 760px; margin-bottom: 1.25rem; font-family: Georgia, "Times New 
   .principles { width: min(100% - 1.5rem, 1180px); grid-template-columns: 1fr; }
   .principles article, .principles article + article { padding: 1.5rem 0; border-left: 0; border-bottom: 1px solid var(--line); }
   .booking-layout, .owner-layout { padding-top: 3rem; }
+  .workspace-header, .selected-time { align-items: stretch; flex-direction: column; }
+  .workspace-summary { grid-template-columns: 1fr; }
   .slot-skeleton { grid-template-columns: 1fr; }
   .site-footer { width: min(100% - 1.5rem, 1180px); flex-direction: column; }
 }

@@ -1,10 +1,12 @@
 import { useEffect, type ReactNode } from "react";
 import { ApiClient } from "./api-client.js";
+import { OwnerWorkspace, type OwnerWorkspaceClient } from "./owner-workspace.js";
 import { VisitorBooking, type VisitorBookingClient } from "./visitor-booking.js";
 import "./styles.css";
 
 interface AppProps {
   readonly apiClient?: VisitorBookingClient;
+  readonly ownerClient?: OwnerWorkspaceClient;
   readonly path?: string;
 }
 
@@ -129,7 +131,7 @@ function VisitorBookingPage({ client, slug }: { readonly client: VisitorBookingC
   );
 }
 
-function OwnerPage() {
+function OwnerPage({ client }: { readonly client: OwnerWorkspaceClient }) {
   return (
     <PageFrame title="Owner workspace | calenolav">
       <section className="owner-layout">
@@ -139,18 +141,7 @@ function OwnerPage() {
           <p>Connect Google Calendar, publish your weekly rhythm, and review connection status from one private workspace.</p>
           <div className="owner-proof"><span aria-hidden="true">&#10003;</span> Session-protected tenant access</div>
         </div>
-        <section className="sign-in-card" aria-labelledby="sign-in-heading">
-          <p className="card-kicker">Welcome back</p>
-          <h2 id="sign-in-heading">Sign in to continue</h2>
-          <form>
-            <label htmlFor="owner-email">Email address</label>
-            <input id="owner-email" name="email" type="email" autoComplete="email" placeholder="you@example.com" />
-            <label htmlFor="owner-password">Password</label>
-            <input id="owner-password" name="password" type="password" autoComplete="current-password" />
-            <button className="button button-primary full-width" type="submit">Sign in securely</button>
-          </form>
-          <p className="form-note">Credentials are sent only to calenolav over your secured connection.</p>
-        </section>
+        <OwnerWorkspace client={client} />
       </section>
     </PageFrame>
   );
@@ -169,11 +160,11 @@ function NotFoundPage() {
   );
 }
 
-export function App({ apiClient = defaultApiClient, path }: AppProps) {
+export function App({ apiClient = defaultApiClient, ownerClient = defaultApiClient, path }: AppProps) {
   const currentPath = path ?? (typeof window === "undefined" ? "/" : window.location.pathname);
   if (currentPath === "/") return <HomePage />;
   if (currentPath === "/book") return <BookingLandingPage />;
-  if (currentPath === "/owner") return <OwnerPage />;
+  if (currentPath === "/owner") return <OwnerPage client={ownerClient} />;
 
   const bookingMatch = /^\/book\/([^/]+)$/.exec(currentPath);
   const slug = bookingMatch?.[1];

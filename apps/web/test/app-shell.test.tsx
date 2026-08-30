@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { ApiClientError } from "../src/api-client.js";
 import { App } from "../src/App.js";
 
 afterEach(() => {
@@ -25,11 +26,20 @@ describe("calenolav application shell", () => {
     expect(document.title).toBe("Book an appointment | calenolav");
   });
 
-  it("renders the owner workspace without exposing it as a visitor route", () => {
-    render(<App path="/owner" />);
+  it("renders the owner workspace without exposing it as a visitor route", async () => {
+    const ownerClient = {
+      getAvailabilityPolicy: vi.fn(),
+      getGoogleConnectionStatus: vi.fn(),
+      getSession: vi.fn(async () => {
+        throw new ApiClientError("invalid_session", 401);
+      }),
+      signIn: vi.fn(),
+      signOut: vi.fn(),
+    };
+    render(<App ownerClient={ownerClient} path="/owner" />);
 
     expect(screen.getByRole("heading", { name: "Manage your calendar" })).toBeVisible();
-    expect(screen.getByText("Sign in to continue")).toBeVisible();
+    expect(await screen.findByText("Sign in to continue")).toBeVisible();
     expect(screen.queryByText("Choose a time")).not.toBeInTheDocument();
     expect(document.title).toBe("Owner workspace | calenolav");
   });

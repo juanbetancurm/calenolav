@@ -4,6 +4,8 @@ The React application is a public client, not a trusted execution boundary. It c
 
 The browser client sends cookies with same-origin API requests so hardened owner sessions can work without exposing raw session tokens to application code. Public booking requests contain only attendee identity, a UUIDv4 idempotency key, and the selected UTC start. Duration, tenant identity, calendar identity, and event construction remain server-owned.
 
+The owner workspace restores only the safe session principal and selects tenant resources exclusively from an owner membership returned by the API. Connection and policy summaries omit credentials and provider internals. Invalid sessions return to sign-in, non-owner accounts cannot trigger tenant reads, and dependency failures collapse to one retryable workspace state.
+
 API failures are reduced to a stable status and safe error code. Malformed bodies, network failures, and unexpected provider responses never become browser-visible internal detail. Public pages display UTC-derived availability and confirmed booking state only.
 
 The visitor flow generates one idempotency key when a slot is selected and keeps it stable across a safe retry. A conflict discards that selection and reloads current availability instead of repeating an uncertain provider side effect. Confirmation omits attendee identity and displays only the confirmed time.

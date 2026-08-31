@@ -181,6 +181,23 @@ export class ApiClient {
     return envelope.data;
   }
 
+  getGoogleAuthorizationUrl(tenantId: string): string {
+    return `${this.#baseUrl}/tenants/${encodeURIComponent(tenantId)}/google/oauth/start`;
+  }
+
+  async disconnectGoogleCalendar(tenantId: string): Promise<void> {
+    const response = await this.#send(
+      `/tenants/${encodeURIComponent(tenantId)}/google/connection`,
+      {
+        credentials: "include",
+        headers: { Accept: "application/json" },
+        method: "DELETE",
+      },
+    );
+    if (response.ok) return;
+    throw await this.#responseError(response);
+  }
+
   async getAvailabilityPolicy(tenantId: string): Promise<AvailabilityPolicyResult> {
     const envelope = await this.#request<{ data: AvailabilityPolicyResult }>(
       `/tenants/${encodeURIComponent(tenantId)}/availability-policy`,
@@ -188,6 +205,25 @@ export class ApiClient {
         credentials: "include",
         headers: { Accept: "application/json" },
         method: "GET",
+      },
+    );
+    return envelope.data;
+  }
+
+  async replaceAvailabilityPolicy(
+    tenantId: string,
+    policy: AvailabilityPolicy,
+  ): Promise<AvailabilityPolicyResult> {
+    const envelope = await this.#request<{ data: AvailabilityPolicyResult }>(
+      `/tenants/${encodeURIComponent(tenantId)}/availability-policy`,
+      {
+        body: JSON.stringify(policy),
+        credentials: "include",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        method: "PUT",
       },
     );
     return envelope.data;

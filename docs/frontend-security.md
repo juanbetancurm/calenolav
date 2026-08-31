@@ -6,6 +6,8 @@ The browser client sends cookies with same-origin API requests so hardened owner
 
 The owner workspace restores only the safe session principal and selects tenant resources exclusively from an owner membership returned by the API. Connection and policy summaries omit credentials and provider internals. Invalid sessions return to sign-in, non-owner accounts cannot trigger tenant reads, and dependency failures collapse to one retryable workspace state.
 
+Owner mutations reuse only the tenant identifier selected from that owner membership. The browser builds the same-origin OAuth entry without reading provider configuration, treats disconnect as a local cookie-authenticated deletion, and refreshes safe connection status afterward. Availability saves replace the complete policy and canonical weekly-window collection; browser wall-time controls convert to minute offsets, while API validation and transactional persistence remain authoritative.
+
 API failures are reduced to a stable status and safe error code. Malformed bodies, network failures, and unexpected provider responses never become browser-visible internal detail. Public pages display UTC-derived availability and confirmed booking state only.
 
 The visitor flow generates one idempotency key when a slot is selected and keeps it stable across a safe retry. A conflict discards that selection and reloads current availability instead of repeating an uncertain provider side effect. Confirmation omits attendee identity and displays only the confirmed time.

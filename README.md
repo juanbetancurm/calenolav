@@ -25,7 +25,7 @@ This modular-monolith design keeps one deployable backend while separating domai
 | 5 | Google OAuth connection and encrypted token storage | Complete |
 | 6 | Availability rules and privacy-safe public availability API | Complete |
 | 7 | Conflict-safe booking and Google event creation | Complete |
-| 8 | React owner and visitor experiences | In progress |
+| 8 | React owner and visitor experiences | Complete |
 | 9 | Sync jobs, webhooks, observability, and failure recovery | Planned |
 | 10 | End-to-end tests, production containers, CI, and deployment | Planned |
 
@@ -88,6 +88,6 @@ The frontend begins with one strict React, Vite, and TypeScript workspace. Its t
 
 The responsive application shell separates visitor scheduling from the owner workspace, rejects unsafe tenant paths locally, and uses semantic HTML without third-party fonts, images, analytics, or tracking requests. Visitors can load current slots, submit only their own booking fields with one retry-stable idempotency key, receive a privacy-safe confirmation, and refresh after a booking conflict.
 
-Owners can restore a hardened session, sign in and out, and load privacy-safe Google connection and availability summaries for an exact owner membership. The HttpOnly token never enters React, non-owner accounts cannot trigger tenant reads, and dependency failures expose one retryable state. Connection actions and policy editing remain in progress.
+Owners can restore a hardened session, sign in and out, and load privacy-safe Google connection and availability summaries for an exact owner membership. The HttpOnly token never enters React, non-owner accounts cannot trigger tenant reads, and dependency failures expose one retryable state. Owners can enter exact-tenant Google OAuth, disconnect locally, and replace the complete availability policy through responsive weekly-window controls that convert wall times to canonical minutes.
 
 Development uses exact shared Vite, Vitest, and Rolldown versions. On Windows systems where Application Control blocks native Rolldown modules, the version-matched WASI fallback preserves the enforced policy while keeping tests and production builds deterministic.

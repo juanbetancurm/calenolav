@@ -7,13 +7,27 @@ import {
   type SignInInput,
   type SignInResult,
 } from "./api-client.js";
+import {
+  OwnerManagement,
+  type OwnerManagementClient,
+} from "./owner-management.js";
 
-export interface OwnerWorkspaceClient {
+export interface OwnerWorkspaceClient extends Partial<OwnerManagementClient> {
   getAvailabilityPolicy(tenantId: string): Promise<AvailabilityPolicyResult>;
   getGoogleConnectionStatus(tenantId: string): Promise<GoogleConnectionStatus>;
   getSession(): Promise<OwnerSession>;
   signIn(input: SignInInput): Promise<SignInResult>;
   signOut(): Promise<void>;
+}
+
+function supportsOwnerManagement(
+  client: OwnerWorkspaceClient,
+): client is OwnerWorkspaceClient & OwnerManagementClient {
+  return (
+    client.disconnectGoogleCalendar !== undefined &&
+    client.getGoogleAuthorizationUrl !== undefined &&
+    client.replaceAvailabilityPolicy !== undefined
+  );
 }
 
 interface OwnerWorkspaceProps {
@@ -187,6 +201,24 @@ export function OwnerWorkspace({ client }: OwnerWorkspaceProps) {
           )}
         </article>
       </div>
+      {supportsOwnerManagement(client) && (
+        <OwnerManagement
+          client={client}
+          connection={state.connection}
+          policyResult={state.policyResult}
+          tenantId={state.tenantId}
+          onConnectionChange={(connection) =>
+            setState((current) =>
+              current.kind === "ready" ? { ...current, connection } : current,
+            )
+          }
+          onPolicyChange={(policyResult) =>
+            setState((current) =>
+              current.kind === "ready" ? { ...current, policyResult } : current,
+            )
+          }
+        />
+      )}
     </section>
   );
 }

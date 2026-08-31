@@ -18,7 +18,7 @@
 html { min-width: 320px; background: #f5f1e8; }
 body { margin: 0; min-width: 320px; min-height: 100vh; }
 a { color: inherit; }
-button, input { font: inherit; }
+button, input, select { font: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
 button:disabled { cursor: wait; opacity: .68; }
 
@@ -115,6 +115,22 @@ h1 { max-width: 760px; margin-bottom: 1.25rem; font-family: Georgia, "Times New 
 .workspace-summary strong { display: block; margin-bottom: .5rem; }
 .workspace-summary article > p:last-child { margin: 0; color: var(--muted); font-size: .88rem; line-height: 1.5; }
 .summary-label { margin-bottom: .55rem; color: var(--green); font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.connection-actions { margin-top: 1rem; }
+.connection-actions .button { width: 100%; }
+.management-success { margin: 1.2rem 0 0; padding: .9rem 1rem; border-left: 3px solid var(--green); background: #edf5f0; color: var(--green-dark); }
+.policy-editor { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--line); }
+.policy-editor-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.policy-editor-heading h3 { margin: 0; font: 600 1.45rem Georgia, serif; }
+.policy-settings { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin-top: 1.3rem; }
+.policy-settings label, .weekly-window label { display: grid; gap: .4rem; color: var(--muted); font-size: .8rem; font-weight: 750; }
+.policy-settings input, .weekly-window input, .weekly-window select { width: 100%; min-height: 2.8rem; padding: .65rem .75rem; border: 1px solid var(--line); border-radius: .4rem; background: white; color: var(--ink); }
+.policy-settings input:focus, .weekly-window input:focus, .weekly-window select:focus { border-color: var(--green); outline: 3px solid rgba(23,107,82,.15); }
+.weekly-window-list { display: grid; gap: .8rem; margin-top: 1.2rem; }
+.weekly-window { display: grid; grid-template-columns: 1.2fr 1fr 1fr auto; gap: .8rem; margin: 0; padding: 1rem; align-items: end; border: 1px solid var(--line); border-radius: .6rem; }
+.weekly-window legend { padding: 0 .35rem; color: var(--green); font-size: .78rem; font-weight: 800; }
+.empty-windows { margin: 0; padding: 1rem; border: 1px dashed var(--line); border-radius: .5rem; color: var(--muted); font-size: .88rem; }
+.remove-window { min-height: 2.8rem; }
+.policy-save { width: 100%; margin-top: 1.2rem; }
 .sign-in-card form { display: grid; gap: .6rem; }
 .sign-in-card label { margin-top: .6rem; font-size: .82rem; font-weight: 750; }
 .sign-in-card input { width: 100%; min-height: 3rem; padding: .75rem .85rem; border: 1px solid var(--line); border-radius: .4rem; background: white; color: var(--ink); }
@@ -142,6 +158,8 @@ h1 { max-width: 760px; margin-bottom: 1.25rem; font-family: Georgia, "Times New 
   .booking-layout, .owner-layout { padding-top: 3rem; }
   .workspace-header, .selected-time { align-items: stretch; flex-direction: column; }
   .workspace-summary { grid-template-columns: 1fr; }
+  .policy-editor-heading { align-items: stretch; flex-direction: column; }
+  .policy-settings, .weekly-window { grid-template-columns: 1fr; }
   .slot-skeleton { grid-template-columns: 1fr; }
   .site-footer { width: min(100% - 1.5rem, 1180px); flex-direction: column; }
 }

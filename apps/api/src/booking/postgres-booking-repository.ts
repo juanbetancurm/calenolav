@@ -4,6 +4,10 @@ import type {
   BookingReservationResult,
   NewBookingReservation,
 } from "./create-booking-service.js";
+import type {
+  PendingBookingClaim,
+  PendingBookingForReconciliation,
+} from "./reconcile-pending-bookings.js";
 
 interface BookingRow {
   attendee_email: string;
@@ -12,6 +16,19 @@ interface BookingRow {
   id: string;
   starts_at: Date;
   status: "confirmed" | "failed" | "pending";
+}
+
+interface BookingRecoveryRow {
+  attendee_email: string;
+  booking_id: string;
+  calendar_id: string;
+  encryption_key_version: number;
+  ends_at: Date;
+  refresh_token_auth_tag: string;
+  refresh_token_ciphertext: string;
+  refresh_token_iv: string;
+  starts_at: Date;
+  tenant_id: string;
 }
 
 function isPostgresError(error: unknown, code: string): boolean {
@@ -102,6 +119,57 @@ export class PostgresBookingRepository implements BookingRepository {
         WHERE id = $1 AND status = 'pending'`,
       [bookingId],
     );
+  }
+
+  async claimPendingBookings(
+    input: PendingBookingClaim,
+  ): Promise<PendingBookingForReconciliation[]> {
+    const result = await this.pool.query<BookingRecoveryRow>(
+      `WITH candidates AS (
+         SELECT booking.id
+           FROM bookings AS booking
+           JOIN google_calendar_connections AS connection
+             ON connection.tenant_id = booking.tenant_id
+          WHERE booking.status = 'pending'
+            AND booking.updated_at <= $1
+          ORDER BY booking.updated_at, booking.id
+          FOR UPDATE OF booking SKIP LOCKED
+          LIMIT $2
+       ), claimed AS (
+         UPDATE bookings AS booking
+            SET updated_at = $3
+           FROM candidates
+          WHERE booking.id = candidates.id
+        RETURNING booking.id AS booking_id, booking.tenant_id,
+                  booking.attendee_email, booking.starts_at, booking.ends_at
+       )
+       SELECT claimed.booking_id, claimed.tenant_id, claimed.attendee_email,
+              claimed.starts_at, claimed.ends_at, connection.calendar_id,
+              connection.refresh_token_ciphertext,
+              connection.refresh_token_iv,
+              connection.refresh_token_auth_tag,
+              connection.encryption_key_version
+         FROM claimed
+         JOIN google_calendar_connections AS connection
+           ON connection.tenant_id = claimed.tenant_id
+        ORDER BY claimed.booking_id`,
+      [input.staleBefore, input.limit, input.claimedAt],
+    );
+
+    return result.rows.map((row) => ({
+      attendeeEmail: row.attendee_email,
+      bookingId: row.booking_id,
+      calendarId: row.calendar_id,
+      endAt: row.ends_at,
+      refreshToken: {
+        authTag: row.refresh_token_auth_tag,
+        ciphertext: row.refresh_token_ciphertext,
+        iv: row.refresh_token_iv,
+        keyVersion: row.encryption_key_version,
+      },
+      startAt: row.starts_at,
+      tenantId: row.tenant_id,
+    }));
   }
 
   private async findByIdempotencyKey(

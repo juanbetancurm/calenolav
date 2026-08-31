@@ -51,6 +51,19 @@ function requireConfiguration(value: string, message: string): string {
   return normalized;
 }
 
+function isDuplicateEventError(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  if ("code" in error && error.code === 409) return true;
+  if (
+    !("response" in error) ||
+    typeof error.response !== "object" ||
+    error.response === null
+  ) {
+    return false;
+  }
+  return "status" in error.response && error.response.status === 409;
+}
+
 function createOfficialClient(options: GoogleEventClientOptions): GoogleEventSdkClient {
   const client = new OAuth2Client({
     clientId: options.clientId,
@@ -125,7 +138,10 @@ export class GoogleCalendarEventClient {
       const googleEventId = response.data.id?.trim();
       if (!googleEventId) throw new GoogleCalendarEventError();
       return { googleEventId };
-    } catch {
+    } catch (error) {
+      if (isDuplicateEventError(error)) {
+        return { googleEventId: deterministicEventId };
+      }
       throw new GoogleCalendarEventError();
     }
   }

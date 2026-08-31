@@ -26,7 +26,7 @@ This modular-monolith design keeps one deployable backend while separating domai
 | 6 | Availability rules and privacy-safe public availability API | Complete |
 | 7 | Conflict-safe booking and Google event creation | Complete |
 | 8 | React owner and visitor experiences | Complete |
-| 9 | Sync jobs, webhooks, observability, and failure recovery | Planned |
+| 9 | Sync jobs, webhooks, observability, and failure recovery | In progress |
 | 10 | End-to-end tests, production containers, CI, and deployment | Planned |
 
 ## Step 1: local database
@@ -91,3 +91,9 @@ The responsive application shell separates visitor scheduling from the owner wor
 Owners can restore a hardened session, sign in and out, and load privacy-safe Google connection and availability summaries for an exact owner membership. The HttpOnly token never enters React, non-owner accounts cannot trigger tenant reads, and dependency failures expose one retryable state. Owners can enter exact-tenant Google OAuth, disconnect locally, and replace the complete availability policy through responsive weekly-window controls that convert wall times to canonical minutes.
 
 Development uses exact shared Vite, Vitest, and Rolldown versions. On Windows systems where Application Control blocks native Rolldown modules, the version-matched WASI fallback preserves the enforced policy while keeping tests and production builds deterministic.
+
+## Step 9: recovery and synchronization
+
+Failure recovery begins with an atomic lease over stale pending bookings. Concurrent workers use PostgreSQL row locking and updated_at leases so only one worker receives a booking at a time, while failures remain pending for a later bounded retry. The worker-facing service decrypts one tenant credential in context, repeats the deterministic Google event insertion, and confirms only the local booking state.
+
+Google 409 responses for the deterministic event identifier are treated as evidence that the same event already exists, allowing an uncertain earlier success to converge without creating a second event. Recovery results expose aggregate claimed, confirmed, and retryable counts only; attendee, credential, and provider details never enter operational output.

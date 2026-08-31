@@ -20,6 +20,10 @@ Google receives one minimal event containing a generic summary, the attendee ema
 
 If event creation fails, the new pending row becomes failed and releases its interval. If Google accepts the event but the confirmation update fails, the row deliberately remains pending: releasing it could allow a second booking over an event that already exists. A later recovery process can reconcile that deterministic event safely.
 
+Recovery atomically leases only stale pending rows that still have a tenant connection. A data-modifying PostgreSQL CTE combines FOR UPDATE SKIP LOCKED with an updated_at lease, preventing concurrent workers from receiving the same booking and making abandoned work eligible later. Each claimed row is isolated: credential, provider, or confirmation failure leaves it pending while the batch continues.
+
+Repeating the deterministic Google insertion either creates the event or receives a duplicate-event 409; both outcomes converge on the same provider event identifier before the local row is confirmed. The recovery service returns counts only and never surfaces attendee identity, encrypted values, tokens, or provider errors.
+
 ## Public HTTP boundary
 
 Visitors create bookings with `POST /public/:slug/bookings` and do not need a session. Strict path and body schemas run before the application service. Successful responses contain only the booking ID, confirmed state, and UTC interval; validation, missing destinations, conflicts, and dependency failures use stable privacy-safe status codes with no-store and no-referrer headers.

@@ -8,7 +8,12 @@ import { PostgresAvailabilityPolicyRepository } from "./availability/postgres-po
 import { PostgresPublicAvailabilityRepository } from "./availability/postgres-public-availability-repository.js";
 import { GetPublicAvailabilityService } from "./availability/public-availability-service.js";
 import { CreateBookingService } from "./booking/create-booking-service.js";
+import {
+  BookingReconciliationRunner,
+  systemReconciliationTimer,
+} from "./booking/booking-reconciliation-runner.js";
 import { PostgresBookingRepository } from "./booking/postgres-booking-repository.js";
+import { ReconcilePendingBookingsService } from "./booking/reconcile-pending-bookings.js";
 import { PostgresOwnerRegistrationRepository } from "./auth/postgres-owner-registration.js";
 import { PostgresSessionRepository } from "./auth/postgres-session-repository.js";
 import { RegisterOwnerService } from "./auth/register-owner.js";
@@ -107,7 +112,16 @@ const googleOAuthRuntime = googleOAuthConfig
       });
       const publicAvailabilityRepository =
         new PostgresPublicAvailabilityRepository(pool);
+      const bookingRepository = new PostgresBookingRepository(pool);
       return {
+        bookingReconciliation: new ReconcilePendingBookingsService({
+          batchSize: config.bookingReconciliation.batchSize,
+          clock,
+          eventClient,
+          repository: bookingRepository,
+          retryDelayMs: config.bookingReconciliation.retryDelayMs,
+          secretBox,
+        }),
         disconnectDependencies: {
           grantRevoker: googleClient,
           secretBox,
@@ -140,7 +154,7 @@ const googleOAuthRuntime = googleOAuthConfig
         publicBooking: {
           createBooking: new CreateBookingService({
             availabilityRepository: publicAvailabilityRepository,
-            bookingRepository: new PostgresBookingRepository(pool),
+            bookingRepository,
             clock,
             eventClient,
             freeBusyClient,
@@ -195,7 +209,17 @@ const app = buildApp({
   },
 });
 
+const bookingReconciliationRunner = googleOAuthRuntime
+  ? new BookingReconciliationRunner({
+      ...systemReconciliationTimer,
+      intervalMs: config.bookingReconciliation.intervalMs,
+      logger: app.log,
+      reconcilePendingBookings: googleOAuthRuntime.bookingReconciliation,
+    })
+  : null;
+
 app.addHook("onClose", async () => {
+  await bookingReconciliationRunner?.stop();
   await pool.end();
 });
 
@@ -214,6 +238,7 @@ process.once("SIGTERM", () => void shutdown("SIGTERM"));
 
 try {
   await app.listen({ host: config.host, port: config.port });
+  bookingReconciliationRunner?.start();
 } catch (error) {
   app.log.error({ err: error }, "API startup failed");
   await app.close();

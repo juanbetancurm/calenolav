@@ -4,6 +4,11 @@ import { readConfig } from "../src/config.js";
 describe("API configuration", () => {
   it("uses safe local HTTP defaults", () => {
     expect(readConfig({ DATABASE_URL: "postgresql://example" })).toEqual({
+      bookingReconciliation: {
+        batchSize: 25,
+        intervalMs: 60_000,
+        retryDelayMs: 5 * 60_000,
+      },
       databaseUrl: "postgresql://example",
       googleOAuth: null,
       host: "0.0.0.0",
@@ -95,5 +100,27 @@ describe("API configuration", () => {
     expect(() =>
       readConfig({ API_PORT: port, DATABASE_URL: "postgresql://example" }),
     ).toThrow("API_PORT must be an integer between 1 and 65535");
+  });
+
+  it("accepts bounded booking reconciliation settings", () => {
+    expect(
+      readConfig({
+        BOOKING_RECONCILIATION_BATCH_SIZE: "40",
+        BOOKING_RECONCILIATION_INTERVAL_MS: "120000",
+        BOOKING_RECONCILIATION_RETRY_DELAY_MS: "600000",
+        DATABASE_URL: "postgresql://example",
+      }).bookingReconciliation,
+    ).toEqual({ batchSize: 40, intervalMs: 120_000, retryDelayMs: 600_000 });
+  });
+
+  it.each([
+    ["BOOKING_RECONCILIATION_BATCH_SIZE", "0"],
+    ["BOOKING_RECONCILIATION_BATCH_SIZE", "101"],
+    ["BOOKING_RECONCILIATION_INTERVAL_MS", "999"],
+    ["BOOKING_RECONCILIATION_RETRY_DELAY_MS", "0"],
+  ])("rejects unsafe %s configuration", (name, value) => {
+    expect(() =>
+      readConfig({ DATABASE_URL: "postgresql://example", [name]: value }),
+    ).toThrow("Booking reconciliation configuration is invalid");
   });
 });

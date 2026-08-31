@@ -14,12 +14,62 @@ export interface GoogleOAuthConfig {
   redirectUri: string;
 }
 
+export interface BookingReconciliationConfig {
+  batchSize: number;
+  intervalMs: number;
+  retryDelayMs: number;
+}
+
 export interface ApiConfig {
+  bookingReconciliation: BookingReconciliationConfig;
   databaseUrl: string;
   googleOAuth: GoogleOAuthConfig | null;
   host: string;
   port: number;
   secureCookies: boolean;
+}
+
+function readBoundedInteger(
+  environment: Environment,
+  name: string,
+  defaultValue: number,
+  minimum: number,
+  maximum: number,
+): number {
+  const rawValue = environment[name]?.trim();
+  const value = rawValue ? Number(rawValue) : defaultValue;
+  if (!Number.isSafeInteger(value) || value < minimum || value > maximum) {
+    throw new Error("Booking reconciliation configuration is invalid.");
+  }
+  return value;
+}
+
+function readBookingReconciliationConfig(
+  environment: Environment,
+): BookingReconciliationConfig {
+  return {
+    batchSize: readBoundedInteger(
+      environment,
+      "BOOKING_RECONCILIATION_BATCH_SIZE",
+      25,
+      1,
+      100,
+    ),
+    intervalMs: readBoundedInteger(
+      environment,
+      "BOOKING_RECONCILIATION_INTERVAL_MS",
+      60_000,
+      1_000,
+      86_400_000,
+    ),
+    retryDelayMs: readBoundedInteger(
+      environment,
+      "BOOKING_RECONCILIATION_RETRY_DELAY_MS",
+      5 * 60_000,
+      1_000,
+      86_400_000,
+    ),
+  };
 }
 
 function readGoogleOAuthConfig(environment: Environment): GoogleOAuthConfig | null {
@@ -85,6 +135,7 @@ export function readConfig(environment: Environment = process.env): ApiConfig {
   }
 
   return {
+    bookingReconciliation: readBookingReconciliationConfig(environment),
     databaseUrl,
     googleOAuth: readGoogleOAuthConfig(environment),
     host: environment.API_HOST?.trim() || "0.0.0.0",

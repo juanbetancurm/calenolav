@@ -24,6 +24,8 @@ Recovery atomically leases only stale pending rows that still have a tenant conn
 
 Repeating the deterministic Google insertion either creates the event or receives a duplicate-event 409; both outcomes converge on the same provider event identifier before the local row is confirmed. The recovery service returns counts only and never surfaces attendee identity, encrypted values, tokens, or provider errors.
 
+The API starts recovery only when complete Google configuration is present. Its bounded runner executes immediately and at a validated interval, allows one batch at a time, clears its timer on shutdown, and waits for active work before the PostgreSQL pool closes. Successful logs contain aggregate counts only; failures use one stable component message without serializing the underlying error.
+
 ## Public HTTP boundary
 
 Visitors create bookings with `POST /public/:slug/bookings` and do not need a session. Strict path and body schemas run before the application service. Successful responses contain only the booking ID, confirmed state, and UTC interval; validation, missing destinations, conflicts, and dependency failures use stable privacy-safe status codes with no-store and no-referrer headers.

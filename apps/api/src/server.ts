@@ -34,10 +34,12 @@ import {
 } from "./google/connection-services.js";
 import { BeginGoogleOAuthService } from "./google/oauth-authorization.js";
 import { CompleteGoogleOAuthService } from "./google/oauth-callback.js";
+import { ProcessGoogleCalendarNotificationService } from "./google/google-calendar-notification.js";
 import { GoogleCalendarEventClient } from "./google/google-event-client.js";
 import { GoogleCalendarFreeBusyClient } from "./google/google-freebusy-client.js";
 import { GoogleOAuthCodeClient } from "./google/google-oauth-client.js";
 import { PostgresGoogleCalendarConnectionManagementRepository } from "./google/postgres-connection-management-repository.js";
+import { PostgresGoogleWatchChannelRepository } from "./google/postgres-google-watch-channel-repository.js";
 import { PostgresGoogleOAuthAttemptRepository } from "./google/postgres-oauth-attempt-repository.js";
 import { PostgresGoogleOAuthCallbackRepository } from "./google/postgres-oauth-callback-repository.js";
 import { Aes256GcmSecretBox } from "./google/secret-box.js";
@@ -114,6 +116,12 @@ const googleOAuthRuntime = googleOAuthConfig
         new PostgresPublicAvailabilityRepository(pool);
       const bookingRepository = new PostgresBookingRepository(pool);
       return {
+        calendarNotifications: {
+          clock,
+          processNotification: new ProcessGoogleCalendarNotificationService({
+            repository: new PostgresGoogleWatchChannelRepository(pool),
+          }),
+        },
         bookingReconciliation: new ReconcilePendingBookingsService({
           batchSize: config.bookingReconciliation.batchSize,
           clock,
@@ -188,6 +196,9 @@ const availabilityPolicy = {
 const app = buildApp({
   availabilityPolicy,
   googleConnectionManagement,
+  ...(googleOAuthRuntime
+    ? { googleCalendarNotifications: googleOAuthRuntime.calendarNotifications }
+    : {}),
   ...(googleOAuthRuntime ? { googleOAuth: googleOAuthRuntime.routes } : {}),
   ...(googleOAuthRuntime
     ? { publicAvailability: googleOAuthRuntime.publicAvailability }

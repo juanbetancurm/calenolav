@@ -21,6 +21,8 @@ import type {
   GetGoogleCalendarConnectionStatusService,
 } from "./google/connection-services.js";
 import { registerGoogleConnectionRoutes } from "./google/connection-routes.js";
+import { registerGoogleCalendarNotificationRoutes } from "./google/google-calendar-notification-route.js";
+import type { ProcessGoogleCalendarNotificationService } from "./google/google-calendar-notification.js";
 import type { BeginGoogleOAuthService } from "./google/oauth-authorization.js";
 import type { CompleteGoogleOAuthService } from "./google/oauth-callback.js";
 import { registerGoogleOAuthRoutes } from "./google/oauth-routes.js";
@@ -33,6 +35,13 @@ export interface BuildAppOptions {
     authenticateSession: Pick<AuthenticateSessionService, "execute">;
     getPolicy: Pick<GetTenantAvailabilityPolicyService, "execute">;
     replacePolicy: Pick<ReplaceTenantAvailabilityPolicyService, "execute">;
+  };
+  googleCalendarNotifications?: {
+    clock: () => Date;
+    processNotification: Pick<
+      ProcessGoogleCalendarNotificationService,
+      "execute"
+    >;
   };
   googleConnectionManagement?: {
     authenticateSession: Pick<AuthenticateSessionService, "execute">;
@@ -104,6 +113,13 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
     void app.register(
       registerGoogleConnectionRoutes,
       options.googleConnectionManagement,
+    );
+  }
+
+  if (options.googleCalendarNotifications) {
+    void app.register(
+      registerGoogleCalendarNotificationRoutes,
+      options.googleCalendarNotifications,
     );
   }
 

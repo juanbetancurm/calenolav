@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  bigint,
   check,
   foreignKey,
   index,
@@ -272,6 +273,58 @@ export const googleCalendarConnections = pgTable(
   ],
 );
 
+export const googleCalendarWatchChannels = pgTable(
+  "google_calendar_watch_channels",
+  {
+    channelId: uuid("channel_id").primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => googleCalendarConnections.tenantId, {
+        onDelete: "cascade",
+      }),
+    channelTokenHash: varchar("channel_token_hash", { length: 64 }).notNull(),
+    resourceId: text("resource_id").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    lastMessageNumber: bigint("last_message_number", { mode: "bigint" })
+      .default(sql.raw("0"))
+      .notNull(),
+    lastNotificationAt: timestamp("last_notification_at", {
+      withTimezone: true,
+    }),
+    lastResourceState: varchar("last_resource_state", { length: 10 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("google_calendar_watch_channels_tenant_expiry_index").on(
+      table.tenantId,
+      table.expiresAt,
+    ),
+    check(
+      "google_calendar_watch_channels_token_hash_format",
+      sql.raw("\"channel_token_hash\" ~ '^[0-9a-f]{64}$'"),
+    ),
+    check(
+      "google_calendar_watch_channels_resource_not_blank",
+      sql.raw('length(trim("resource_id")) > 0'),
+    ),
+    check(
+      "google_calendar_watch_channels_message_number_nonnegative",
+      sql.raw('"last_message_number" >= 0'),
+    ),
+    check(
+      "google_calendar_watch_channels_resource_state",
+      sql.raw(
+        "\"last_resource_state\" is null or \"last_resource_state\" in ('sync', 'exists', 'not_exists')",
+      ),
+    ),
+    check(
+      "google_calendar_watch_channels_expiry_after_creation",
+      sql.raw('"expires_at" > "created_at"'),
+    ),
+  ],
+);
+
 export const googleOauthAttempts = pgTable(
   "google_oauth_attempts",
   {
@@ -326,6 +379,8 @@ export type Tenant = typeof tenants.$inferSelect;
 export type NewTenant = typeof tenants.$inferInsert;
 export type GoogleCalendarConnection = typeof googleCalendarConnections.$inferSelect;
 export type NewGoogleCalendarConnection = typeof googleCalendarConnections.$inferInsert;
+export type GoogleCalendarWatchChannel = typeof googleCalendarWatchChannels.$inferSelect;
+export type NewGoogleCalendarWatchChannel = typeof googleCalendarWatchChannels.$inferInsert;
 export type GoogleOauthAttempt = typeof googleOauthAttempts.$inferSelect;
 export type NewGoogleOauthAttempt = typeof googleOauthAttempts.$inferInsert;
 export type AvailabilityPolicy = typeof availabilityPolicies.$inferSelect;
